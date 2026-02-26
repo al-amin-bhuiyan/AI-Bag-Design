@@ -1,0 +1,5 @@
+package com.example.jeebz_bag_design_app
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

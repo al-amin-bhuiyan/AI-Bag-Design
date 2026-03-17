@@ -2,231 +2,277 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../your_design_controller/your_design_controller.dart';
 import '../collections_controller/collections_controller.dart';
-import '../../widgets/custom_assets.dart';
+import '../../services/bag_design_service.dart';
 
 /// UploadImageController - Manages upload image screen state and business logic
 /// Follows OOP principles with clear separation of concerns
 class UploadImageController extends GetxController {
   // ============ OBSERVABLE PROPERTIES ============
-  
+
   /// Loading state
   final _isLoading = false.obs;
   RxBool get isLoading => _isLoading;
-  
+
   /// Selected image path
   final _selectedImagePath = Rx<String?>(null);
   String? get selectedImagePath => _selectedImagePath.value;
-  
+
+  /// Generated design preview URL (from API response → preview_url)
+  final _previewUrl = Rx<String?>(null);
+  String? get previewUrl => _previewUrl.value;
+
+  /// Generated design dieline URL (from API response → dieline_url)
+  final _dielineUrl = Rx<String?>(null);
+  String? get dielineUrl => _dielineUrl.value;
+
+  /// Generated preview ID (from API response → preview_id)
+  final _generatedPreviewId = Rx<String?>(null);
+  String? get generatedPreviewId => _generatedPreviewId.value;
+
+  /// Whether generated images are available from network URLs.
+  final _hasGeneratedImages = false.obs;
+  bool get hasGeneratedImages => _hasGeneratedImages.value;
+
   // ============ DEPENDENCIES ============
-  
+
   final ImagePicker _imagePicker = ImagePicker();
-  
+  final BagDesignService _bagDesignService = BagDesignService.instance;
+
   // ============ LIFECYCLE METHODS ============
-  
+
   @override
   void onInit() {
     super.onInit();
-    _initialize();
-  }
-  
-  @override
-  void onClose() {
-    _cleanup();
-    super.onClose();
-  }
-  
-  // ============ INITIALIZATION ============
-  
-  /// Initializes the controller
-  void _initialize() {
     print('📸 UploadImageController initialized');
   }
-  
-  /// Cleanup resources
-  void _cleanup() {
+
+  @override
+  void onClose() {
     print('📸 UploadImageController disposed');
+    super.onClose();
   }
-  
+
   // ============ IMAGE PICKER METHODS ============
-  
+
   /// Picks image from gallery
   Future<void> pickImage(BuildContext context) async {
     print('📸 Picking image from gallery');
-    
     _setLoading(true);
-    
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
       );
-      
       if (image != null) {
         _selectedImagePath.value = image.path;
+        _previewUrl.value = null;
+        _dielineUrl.value = null;
+        _generatedPreviewId.value = null;
+        _hasGeneratedImages.value = false;
         print('✅ Image selected: ${image.path}');
-        _showMessage('Image selected successfully!');
-        
-        // TODO: Navigate to next screen or process image
-        await _processImage(image.path);
       } else {
         print('❌ No image selected');
-        _showMessage('No image selected');
+        _showToast('No image selected', isError: false);
       }
     } catch (e) {
       print('❌ Error picking image: $e');
-      _showMessage('Failed to pick image: $e');
+      _showToast('Failed to pick image', isError: true);
     } finally {
       _setLoading(false);
     }
   }
-  
-  /// Processes the selected image
-  Future<void> _processImage(String imagePath) async {
-    print('🔄 Processing image: $imagePath');
-    
+
+  // ============ CORE API METHOD ============
+
+  /// Uploads the selected logo and generates bag design via API.
+  /// [bagType] should match the API value e.g. 'gusset_fullwrap'
+  /// Returns true on success, false on failure.
+  Future<bool> generateBagDesign({String bagType = 'gusset_fullwrap'}) async {
+    if (_selectedImagePath.value == null) {
+      _showToast('Please select an image first', isError: true);
+      return false;
+    }
+
+    final logoFile = File(_selectedImagePath.value!);
+
+    print('🚀 Starting upload + generate for bagType: $bagType');
+
     try {
-      // TODO: Implement image processing logic
-      // - Upload to server
-      // - Apply filters
-      // - Navigate to editor screen
-      
-      await Future.delayed(const Duration(seconds: 1));
-      
-      print('✅ Image processed successfully');
-      // Navigate to design editor or next screen
+      final response = await _bagDesignService.uploadLogoAndGenerateDesign(
+        logoFile: logoFile,
+        bagType: bagType,
+      );
+
+      if (response.success && response.data != null) {
+        _previewUrl.value = response.data!.previewUrl;
+        _dielineUrl.value = response.data!.dielineUrl;
+        _generatedPreviewId.value = response.data!.previewId;
+        _hasGeneratedImages.value = true;
+        print('✅ Design generated → preview: ${_previewUrl.value}');
+        print('✅ Design generated → dieline: ${_dielineUrl.value}');
+        print('✅ Design generated → preview_id: ${_generatedPreviewId.value}');
+        return true;
+      } else {
+        _previewUrl.value = null;
+        _dielineUrl.value = null;
+        _generatedPreviewId.value = null;
+        _hasGeneratedImages.value = false;
+        print('❌ API error: ${response.errorMessage}');
+        if (!_isSilentAuthError(response.errorMessage, response.statusCode)) {
+          _showToast('Bag design deos not successfull', isError: true);
+        }
+        return false;
+      }
     } catch (e) {
-      print('❌ Error processing image: $e');
-      _showMessage('Failed to process image: $e');
+      _previewUrl.value = null;
+      _dielineUrl.value = null;
+      _generatedPreviewId.value = null;
+      _hasGeneratedImages.value = false;
+      print('❌ Exception during generation: $e');
+      _showToast('Bag design deos not successfull', isError: true);
+      return false;
     }
   }
-  
+
   // ============ UTILITY METHODS ============
-  
+
+  /// Returns generated mockup image URLs for MockupDialog.
+  List<String> get mockupImages {
+    if (_hasGeneratedImages.value &&
+        _previewUrl.value != null &&
+        _dielineUrl.value != null) {
+      return [_previewUrl.value!, _dielineUrl.value!];
+    }
+    return <String>[];
+  }
+
   /// Sets loading state
   void _setLoading(bool value) {
     _isLoading.value = value;
   }
-  
-  /// Shows a message to the user
-  void _showMessage(String message) {
-    Get.snackbar(
-      'Info',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
+
+  /// Shows a fluttertoast message
+  void _showToast(String message, {bool isError = false}) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: isError ? const Color(0xFFF44336) : const Color(0xFF4CAF50),
+      textColor: Colors.white,
+      fontSize: 14.0,
     );
   }
-  
+
+  bool _isSilentAuthError(String? message, int? statusCode) {
+    if (statusCode == 401 || statusCode == 403) return true;
+    final text = (message ?? '').toLowerCase();
+    return text.contains('authentication required') ||
+        text.contains('authentication failed') ||
+        text.contains('please login') ||
+        text.contains('please log in') ||
+        text.contains('unauthorized');
+  }
+
   /// Resets controller state
   void reset() {
     _selectedImagePath.value = null;
+    _previewUrl.value = null;
+    _dielineUrl.value = null;
+    _generatedPreviewId.value = null;
+    _hasGeneratedImages.value = false;
     _isLoading.value = false;
   }
-  
+
   /// Refreshes the screen
   Future<void> refresh() async {
     print('🔄 Refreshing upload screen');
     _setLoading(true);
-    
-    // Simulate refresh delay
     await Future.delayed(const Duration(milliseconds: 800));
-    
     reset();
     _setLoading(false);
-    _showMessage('Screen refreshed');
   }
-  
-  /// Saves the selected image
+
+  /// Saves the selected image to YourDesign
   void saveImage() {
     if (_selectedImagePath.value != null) {
       print('💾 Saving image: ${_selectedImagePath.value}');
-      
-      // Get or create YourDesignController instance
       YourDesignController yourDesignController;
-      
       try {
         yourDesignController = Get.find<YourDesignController>();
       } catch (e) {
-        print('⚠️ YourDesignController not found, creating new instance...');
         yourDesignController = YourDesignController();
         Get.put(yourDesignController);
       }
-      
-      // Add the saved image to projects
       yourDesignController.addSavedImage(_selectedImagePath.value!);
-      
-      // Toast message will be shown in UI layer
     }
   }
-  
-  /// Shows bag design preview with mockup dialog
+
+  /// Called when Show Bag Design button is tapped (for logging only)
   void showBagDesign(BuildContext context) {
-    if (_selectedImagePath.value != null) {
-      print('👜 Showing bag design preview');
-      // Show mockup dialog will be handled in UI layer
-    }
+    print('👜 Show Bag Design tapped');
   }
-  
-  /// Saves mockup images to device gallery
-  Future<void> saveMockupImages() async {
-    print('💾 Saving mockup image to gallery');
-    
+
+  /// Saves generated design to server collection and injects response into Your Design.
+  Future<bool> saveGeneratedLogoToYourDesign() async {
+    if (_generatedPreviewId.value == null || _generatedPreviewId.value!.isEmpty) {
+      _showToast('Preview ID not available. Please generate design first.', isError: true);
+      return false;
+    }
+
+    _setLoading(true);
+
     try {
-      // Copy the first mockup image (mockupImage1) from assets to app directory
-      final ByteData imageData = await rootBundle.load(CustomAssets.mockupImage1);
-      final buffer = imageData.buffer;
-      
-      // Get the temporary directory
-      final tempDir = await getTemporaryDirectory();
-      final fileName = 'mockup_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File('${tempDir.path}/$fileName');
-      
-      // Write the image to file
-      await file.writeAsBytes(
-        buffer.asUint8List(imageData.offsetInBytes, imageData.lengthInBytes),
+      // Save to backend using /api/collections/save/ and update Your Design list.
+      final yourDesignController = Get.isRegistered<YourDesignController>()
+          ? Get.find<YourDesignController>()
+          : Get.put(YourDesignController());
+
+      final isSaved = await yourDesignController.saveDesignToCollection(
+        _generatedPreviewId.value!,
       );
-      
-      print('✅ Mockup image saved to: ${file.path}');
-      
-      // Note: For actual gallery saving, you would need image_gallery_saver package
-      // For now, we save to app directory which can be accessed
-      _showMessage('Mockup image saved successfully!');
-      
+      return isSaved;
     } catch (e) {
-      print('❌ Error saving mockup image: $e');
-      _showMessage('Failed to save mockup image: $e');
+      _showToast('Failed to save image. Please try again.', isError: true);
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
-  
+
   /// Adds first mockup image to collections
-  Future<void> addMockupToCollections() async {
-    print('📁 Adding mockup to collections');
-    
+  Future<bool> addMockupToCollections() async {
+    print('📁 Adding generated design to collections');
+
+    if (_generatedPreviewId.value == null || _generatedPreviewId.value!.isEmpty) {
+      _showToast('Preview ID not available. Please generate design first.', isError: true);
+      return false;
+    }
+
     try {
-      // Get or create CollectionsController instance
       CollectionsController collectionsController;
-      
       try {
         collectionsController = Get.find<CollectionsController>();
       } catch (e) {
-        print('⚠️ CollectionsController not found, creating new instance...');
         collectionsController = CollectionsController();
         Get.put(collectionsController);
       }
-      
-      // Add the first mockup image (mockupImage1) to collections
-      collectionsController.addSavedImage(CustomAssets.mockupImage1);
-      
-      print('✅ Mockup added to collections');
-      _showMessage('Mockup added to collections!');
-      
+
+      final isSaved = await collectionsController.saveDesignToCollection(
+        _generatedPreviewId.value!,
+      );
+
+      if (isSaved) {
+        print('✅ Design saved to collections API');
+      }
+
+      return isSaved;
     } catch (e) {
       print('❌ Error adding mockup to collections: $e');
-      _showMessage('Failed to add mockup to collections: $e');
+      _showToast('Failed to add mockup to collections', isError: true);
+      return false;
     }
   }
 }

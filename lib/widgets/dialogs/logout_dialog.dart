@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../utils/app_fonts.dart';
 import '../../../widgets/custom_assets.dart';
+import '../custom_button.dart';
 
 /// Logout Confirmation Dialog Widget
 /// Follows OOP principles with encapsulation and single responsibility
@@ -147,11 +148,13 @@ class _LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).pop(); // Close dialog
-        onLogoutConfirm(); // Execute logout
+    return CircleFadeAnimation(
+      onPressed: () {
+        Navigator.of(context).pop();
+        onLogoutConfirm();
       },
+      borderRadius: BorderRadius.circular(10.r),
+      splashColor: Colors.white,
       child: Container(
         width: double.infinity,
         height: 44.h,
@@ -160,7 +163,7 @@ class _LogoutButton extends StatelessWidget {
           color: const Color(0xCC181A20),
           border: Border.all(
             width: 1,
-            color:const Color(0xCC181A20),
+            color: const Color(0xCC181A20),
           ),
           borderRadius: BorderRadius.circular(10.r),
         ),

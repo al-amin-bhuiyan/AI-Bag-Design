@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import '../controllers/change_password_controller/change_password_controller.dart';
 import '../controllers/create_controller/create_controller.dart';
-import '../controllers/splash_controller/splash_controller.dart';
 import '../controllers/forgot_password_controller/forgot_password_controller.dart';
 import '../controllers/verification_code_controller/verification_code_controller.dart';
 import '../controllers/reset_success_controller/reset_success_controller.dart';
@@ -19,6 +18,7 @@ import '../controllers/your_design_controller/your_design_controller.dart';
 
 /// Binding class manages dependency injection for the entire application
 /// Follows OOP principles with separation of concerns and lazy initialization
+/// NOTE: SplashController removed — AuthGuardScreen handles auth routing directly
 class Binding {
   // Private constructor to prevent instantiation
   Binding._();
@@ -31,10 +31,7 @@ class Binding {
   }
 
   /// Initializes all controllers with lazy loading
-  /// Controllers are created only when needed
   static void _initializeControllers() {
-    // Lazy put ensures controller is created only when first accessed
-    Get.lazyPut<SplashController>(() => SplashController(), fenix: true);
     Get.lazyPut<ForgotPasswordController>(() => ForgotPasswordController(), fenix: true);
     Get.lazyPut<VerificationCodeController>(() => VerificationCodeController(), fenix: true);
     Get.lazyPut<ChangePasswordController>(() => ChangePasswordController(), fenix: true);
@@ -51,21 +48,16 @@ class Binding {
     Get.lazyPut<PrivacyPolicyController>(() => PrivacyPolicyController(), fenix: true);
     Get.lazyPut<TermsAndConditionsController>(() => TermsAndConditionsController(), fenix: true);
     Get.lazyPut<YourDesignController>(() => YourDesignController(), fenix: true);
-    
-    // Add more controller bindings here as the app grows
   }
 
-  /// Initializes app-wide services
-  /// Services are typically created immediately and persist throughout app lifecycle
+  /// Initializes app-wide services (singletons that persist entire app lifecycle)
   static void _initializeServices() {
-    // Put app-wide services here
-    // Example:
-    // Get.put<AuthService>(AuthService(), permanent: true);
-    // Get.put<StorageService>(StorageService(), permanent: true);
+    // Services are singletons — no need to register with Get
+    // AuthStateService.instance, TokenStorageService.instance, etc.
+    // are accessed directly via their singleton accessors
   }
 
   /// Cleans up all dependencies
-  /// Useful for testing or complete app reset
   static void dispose() {
     Get.deleteAll(force: true);
   }

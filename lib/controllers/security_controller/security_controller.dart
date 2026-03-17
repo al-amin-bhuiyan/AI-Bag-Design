@@ -1,69 +1,101 @@
-import 'package:get/get.dart';
+﻿import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:fluttertoast/fluttertoast.dart';
+import '../../models/api_response_model.dart';
+import '../../models/delete_account_model.dart';
+import '../../routes/app_path.dart';
+import '../../services/auth_service.dart';
+import '../../services/auth_state_service.dart';
+import '../../services/session_data_isolation_service.dart';
+import '../../services/token_storage_service.dart';
+import '../../widgets/dialogs/delete_account_dialog.dart';
 /// SecurityController - Manages security screen state and business logic
-/// Follows OOP principles with encapsulation and separation of concerns
+/// Calls real DELETE /accounts/user/delete-account/ API with Bearer token
+/// Shows Fluttertoast for success and error responses
+/// Follows 100% OOP: encapsulation, single responsibility, composition
 class SecurityController extends GetxController {
-  // ============ Observables ============
-  
-  final RxBool isLoading = false.obs;
+  // Dependencies
+  final AuthService _authService = AuthService.instance;
+  final TokenStorageService _tokenStorage = TokenStorageService.instance;
+  // Observable State
+  final RxBool isLoading         = false.obs;
   final RxBool isDeletingAccount = false.obs;
-
-  // ============ Lifecycle Methods ============
-  
-  @override
-  void onInit() {
-    super.onInit();
-  }
-
-  @override
-  void onClose() {
-    super.onClose();
-  }
-
-  // ============ Private Methods ============
-  
-  /// Sets loading state
-  void _setLoading(bool value) {
-    isLoading.value = value;
-  }
-
-  /// Sets delete account loading state
-  void _setDeletingAccount(bool value) {
-    isDeletingAccount.value = value;
-  }
-
-  // ============ Public Methods ============
-  
-  /// Navigates to change password screen
-  void navigateToChangePassword(BuildContext context) {
-    context.push('/change-password');
-    print('🔵 Navigate to Change Password');
-  }
-
+  // Navigation
+  void navigateToChangePassword(BuildContext context) =>
+      context.push(AppPath.changePassword);
+  // Delete Account
   /// Shows delete account confirmation dialog
-  Future<void> showDeleteAccountDialog(BuildContext context) async {
-    // This will be called from the UI to show the dialog
-    print('🔵 Show Delete Account Dialog');
+  /// Passes screen-level context into callback so navigation works after dialog closes
+  void showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => DeleteAccountDialog(
+        onConfirm: () async {
+          Navigator.of(dialogContext).pop();
+          await _performDeleteAccount(context);
+        },
+      ),
+    );
   }
-
-  /// Handles account deletion
-  Future<void> deleteAccount() async {
-    _setDeletingAccount(true);
-    
+  /// Calls DELETE /accounts/user/delete-account/ with Bearer token
+  /// On success: clears all local data (full logout) then navigates to login
+  /// If session already expired (no token): goes to login directly
+  Future<void> _performDeleteAccount(BuildContext context) async {
+    isDeletingAccount.value = true;
     try {
-      // TODO: Implement account deletion API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      print('✅ Account deleted successfully');
-      // Navigate to login or splash screen after deletion
-      
+      final String? accessToken = await _tokenStorage.getAccessToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        _showError('Session expired. Please log in again.');
+        // Clear any stale data and go to login
+        await _tokenStorage.clearAll();
+        SessionDataIsolationService.instance.clearUserScopedState();
+        AuthStateService.instance.setUnauthenticated();
+        if (context.mounted) context.go(AppPath.login);
+        return;
+      }
+      debugPrint('Deleting account...');
+      final ApiResponse<DeleteAccountResponseModel> response =
+          await _authService.deleteAccount(accessToken: accessToken);
+      if (response.success && response.data != null) {
+        final String msg = response.data!.message;
+        debugPrint('Success: $msg');
+        // Full logout — clear tokens, session, auth state
+        await _tokenStorage.clearAll();
+        SessionDataIsolationService.instance.clearUserScopedState();
+        AuthStateService.instance.setUnauthenticated();
+        _showSuccess(msg);
+        // Short delay so toast is visible
+        await Future.delayed(const Duration(milliseconds: 800));
+        // Navigate using valid screen context — always works
+        if (context.mounted) context.go(AppPath.login);
+      } else {
+        _showError(response.errorMessage ??
+            'Failed to delete account. Please try again.');
+      }
     } catch (e) {
-      print('❌ Error deleting account: $e');
-      // Show error message
+      debugPrint('Error Delete account: $e');
+      _showError('Something went wrong. Please try again.');
     } finally {
-      _setDeletingAccount(false);
+      isDeletingAccount.value = false;
     }
   }
+  // Toast Helpers
+  void _showError(String message) => Fluttertoast.showToast(
+        msg: message,
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: const Color(0xFFF44336),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+  void _showSuccess(String message) => Fluttertoast.showToast(
+        msg: message,
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: const Color(0xFF4CAF50),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
 }

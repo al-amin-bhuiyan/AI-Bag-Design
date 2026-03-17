@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import '../create_controller/create_controller.dart';
+import '../collections_controller/collections_controller.dart';
+import '../../services/bag_design_service.dart';
+import '../your_design_controller/your_design_controller.dart';
 import '../../views/ai_generation/ai_generation_screen.dart';
-import '../../widgets/custom_snackbar.dart';
 import '../../widgets/mockup_dialog.dart';
 
 /// TextToDesignController - Manages AI text-to-design screen state and business logic
@@ -17,9 +21,18 @@ class TextToDesignController extends GetxController {
   final _generatedDesignUrl = Rx<String?>(null);
   String? get generatedDesignUrl => _generatedDesignUrl.value;
   
+  /// Generated design preview ID (from backend API response)
+  final _generatedDesignPreviewId = Rx<String?>(null);
+  String? get generatedDesignPreviewId => _generatedDesignPreviewId.value;
+
+  /// Generated bag mockup URLs from /api/generate-design/
+  final _generatedPreviewUrl = Rx<String?>(null);
+  final _generatedDielineUrl = Rx<String?>(null);
+  
   // ============ TEXT FIELD CONTROLLER ============
   
   final TextEditingController textController = TextEditingController();
+  final BagDesignService _bagDesignService = BagDesignService.instance;
   
   // ============ LIFECYCLE METHODS ============
   
@@ -58,9 +71,13 @@ class TextToDesignController extends GetxController {
     
     if (text.isEmpty) {
       print('❌ Validation failed: Text is empty');
-      CustomSnackBar.showError(
-        context,
-        message: 'Please enter a description',
+      Fluttertoast.showToast(
+        msg: 'Please enter a description',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: const Color(0xFFF44336),
+        textColor: Colors.white,
+        fontSize: 15.0,
       );
       return false;
     }
@@ -71,9 +88,13 @@ class TextToDesignController extends GetxController {
     
     if (wordCount < 5) {
       print('❌ Validation failed: Not enough words ($wordCount < 5)');
-      CustomSnackBar.showError(
-        context,
-        message: 'Please enter at least 5 words to describe your design',
+      Fluttertoast.showToast(
+        msg: 'Please enter at least 5 words to describe your design',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: const Color(0xFFF44336),
+        textColor: Colors.white,
+        fontSize: 15.0,
       );
       return false;
     }
@@ -102,141 +123,65 @@ class TextToDesignController extends GetxController {
       
       // Small delay to ensure keyboard is dismissed
       await Future.delayed(const Duration(milliseconds: 150));
+
+      if (!context.mounted) return;
       
-      // Navigate to full-page AI generation screen
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => AIGenerationScreen(
-            onGenerate: () async {
-              print('🔄 onGenerate callback triggered');
-              // Perform actual generation
-              await _performGeneration();
-            },
-            onAddToDesign: () {
-              print('➕ onAddToDesign callback triggered');
-              // Handle add to design
-              _handleAddToDesign(context);
-            },
-            onRegenerate: () async {
-              print('🔄 onRegenerate callback triggered');
-              
-              // Store the context before replacing
-              final currentContext = context;
-              
-              // Dismiss keyboard to prevent it from showing
-              FocusScope.of(currentContext).unfocus();
-              
-              // Small delay to ensure keyboard dismissal is processed
-              await Future.delayed(const Duration(milliseconds: 100));
-              
-              // Use pushReplacement instead of pop + push
-              // This prevents the text-to-design screen from ever becoming visible
-              Navigator.of(currentContext).pushReplacement(
-                MaterialPageRoute(
-                  builder: (context) => AIGenerationScreen(
-                    onGenerate: () async {
-                      print('🔄 onGenerate callback triggered (regenerated)');
-                      // Perform actual generation
-                      await _performGeneration();
-                    },
-                    onAddToDesign: () {
-                      print('➕ onAddToDesign callback triggered (regenerated)');
-                      // Handle add to design
-                      _handleAddToDesign(context);
-                    },
-                    onRegenerate: () async {
-                      // Recursive regeneration using the same approach
-                      print('🔄 onRegenerate callback triggered (nested)');
-                      
-                      final ctx = context;
-                      FocusScope.of(ctx).unfocus();
-                      await Future.delayed(const Duration(milliseconds: 100));
-                      
-                      Navigator.of(ctx).pushReplacement(
-                        MaterialPageRoute(
-                          builder: (context) => AIGenerationScreen(
-                            onGenerate: () async {
-                              await _performGeneration();
-                            },
-                            onAddToDesign: () {
-                              _handleAddToDesign(context);
-                            },
-                            onRegenerate: () async {
-                              // Continue recursive pattern
-                              final c = context;
-                              FocusScope.of(c).unfocus();
-                              await Future.delayed(const Duration(milliseconds: 100));
-                              _navigateToAIGenerationScreen(c);
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      );
+      await _navigateToAIGenerationScreen(context, replaceCurrent: false);
+
+      if (!context.mounted) return;
       
       // After AI generation screen is closed, ensure keyboard stays dismissed
       FocusScope.of(context).unfocus();
       print('✅ AI generation screen closed, keyboard dismissed');
     } catch (e) {
       print('❌ Error navigating to AI generation screen: $e');
-      CustomSnackBar.showError(
-        context,
-        message: 'Failed to open generation screen: $e',
+      Fluttertoast.showToast(
+        msg: 'Failed to open generation screen',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: const Color(0xFFF44336),
+        textColor: Colors.white,
+        fontSize: 15.0,
       );
     }
   }
   
   /// Helper method to navigate to AI generation screen without initial keyboard delay
   /// Used by onRegenerate to prevent showing text-to-design screen
-  Future<void> _navigateToAIGenerationScreen(BuildContext context) async {
+  Future<void> _navigateToAIGenerationScreen(
+    BuildContext context, {
+    required bool replaceCurrent,
+  }) async {
     try {
-      // Navigate to full-page AI generation screen immediately
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => AIGenerationScreen(
-            onGenerate: () async {
-              print('🔄 onGenerate callback triggered (regenerated)');
-              // Perform actual generation
-              await _performGeneration();
-            },
-            onAddToDesign: () {
-              print('➕ onAddToDesign callback triggered (regenerated)');
-              // Handle add to design
-              _handleAddToDesign(context);
-            },
-            onRegenerate: () async {
-              print('🔄 onRegenerate callback triggered (nested)');
-              
-              // Store the context before popping
-              final currentContext = context;
-              
-              // Dismiss keyboard to prevent it from showing
-              FocusScope.of(currentContext).unfocus();
-              
-              // Pop current AI generation screen
-              Navigator.of(currentContext).pop();
-              
-              // Immediately show new AI generation screen without any delay
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (currentContext.mounted) {
-                  FocusScope.of(currentContext).unfocus();
-                  _navigateToAIGenerationScreen(currentContext);
-                }
-              });
-            },
-          ),
+      final route = MaterialPageRoute(
+        builder: (routeContext) => AIGenerationScreen(
+          onGenerate: _performGeneration,
+          getGeneratedImageUrl: () => _generatedDesignUrl.value,
+          onAddToDesign: () => _handleAddToDesign(routeContext),
+          onRegenerate: () async {
+            FocusScope.of(routeContext).unfocus();
+            await Future.delayed(const Duration(milliseconds: 100));
+            if (routeContext.mounted) {
+              await _navigateToAIGenerationScreen(
+                routeContext,
+                replaceCurrent: true,
+              );
+            }
+          },
         ),
       );
+
+      if (replaceCurrent) {
+        await Navigator.of(context).pushReplacement(route);
+      } else {
+        await Navigator.of(context).push(route);
+      }
+
+      if (!context.mounted) return;
       
       // After AI generation screen is closed, ensure keyboard stays dismissed
       FocusScope.of(context).unfocus();
-      print('✅ AI generation screen closed (regenerated), keyboard dismissed');
+      print('✅ AI generation screen closed, keyboard dismissed');
     } catch (e) {
       print('❌ Error navigating to AI generation screen: $e');
     }
@@ -249,9 +194,11 @@ class TextToDesignController extends GetxController {
     try {
       final prompt = textController.text.trim();
       print('📝 Prompt: $prompt');
-      
-      // Simulate AI generation (10-20 seconds as shown in UI)
-      await Future.delayed(const Duration(seconds: 3));
+
+      _generatedDesignUrl.value = null;
+      _generatedPreviewUrl.value = null;
+      _generatedDielineUrl.value = null;
+      _generatedDesignPreviewId.value = null;
       
       // Call AI service
       await _callAIService(prompt);
@@ -268,51 +215,56 @@ class TextToDesignController extends GetxController {
   
   /// Handles adding generated design to user's designs
   void _handleAddToDesign(BuildContext context) async {
-    print('➕ Adding generated design to user designs - Showing mockup dialog');
-    
-    // Show mockup dialog on top of AI generation screen
+    print('➕ Add image to your design tapped');
+
+    final logoUrl = _generatedDesignUrl.value?.trim() ?? '';
+    if (logoUrl.isEmpty) {
+      Fluttertoast.showToast(
+        msg: 'Please generate a logo first.',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return;
+    }
+
+    _setLoading(true);
+    try {
+      final bagType = _resolveBagType();
+      final response = await _bagDesignService.generateDesign(
+        bagType: bagType,
+        logoUrl: logoUrl,
+      );
+
+      if (!response.success || response.data == null) {
+        Fluttertoast.showToast(
+          msg: response.errorMessage ?? 'Failed to generate bag design',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 15.0,
+        );
+        return;
+      }
+
+      _generatedPreviewUrl.value = response.data!.previewUrl;
+      _generatedDielineUrl.value = response.data!.dielineUrl;
+      _generatedDesignPreviewId.value = response.data!.previewId;
+    } finally {
+      _setLoading(false);
+    }
+
+    if (!context.mounted) return;
+
     await MockupDialog.show(
       context,
-      onSaveImages: () async {
-        print('💾 Saving mockup images to gallery');
-        
-        // Dismiss keyboard first to prevent it from appearing
-        FocusScope.of(context).unfocus();
-        
-        // Close AI generation screen
-        if (context.mounted) {
-          Navigator.of(context).pop();
-        }
-        
-        // Small delay to ensure the pop completes
-        await Future.delayed(const Duration(milliseconds: 50));
-        
-        // TODO: Implement save to gallery functionality
-        CustomSnackBar.showSuccess(
-          context,
-          message: 'Mockup images saved to gallery!',
-        );
-      },
-      onAddToCollections: () async {
-        print('📁 Adding mockup to collections');
-        
-        // Dismiss keyboard first to prevent it from appearing
-        FocusScope.of(context).unfocus();
-        
-        // Close AI generation screen
-        if (context.mounted) {
-          Navigator.of(context).pop();
-        }
-        
-        // Small delay to ensure the pop completes
-        await Future.delayed(const Duration(milliseconds: 50));
-        
-        // TODO: Implement add to collections functionality
-        CustomSnackBar.showSuccess(
-          context,
-          message: 'Mockup added to collections!',
-        );
-      },
+      images: [_generatedPreviewUrl.value!, _generatedDielineUrl.value!],
+      isNetworkImage: true,
+      onSaveImages: _saveToYourDesign,
+      onAddToCollections: _addToCollections,
     );
   }
   
@@ -321,13 +273,18 @@ class TextToDesignController extends GetxController {
     print('🤖 Calling AI service with prompt: $prompt');
     
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 3)); 
-      
-      // TODO: Replace with actual AI API integration
-      _generatedDesignUrl.value = 'https://example.com/generated-design.png';
+      final response = await _bagDesignService.generateLogo(prompt: prompt);
+      if (!response.success || response.data == null) {
+        throw Exception(response.errorMessage ?? 'Failed to generate image');
+      }
+
+      _generatedDesignUrl.value = response.data!.fullLogoUrl;
+      _generatedPreviewUrl.value = null;
+      _generatedDielineUrl.value = null;
+      _generatedDesignPreviewId.value = null;
       
       print('✅ AI service responded successfully');
+      print('🖼️ Generated logo URL: ${_generatedDesignUrl.value}');
     } catch (e) {
       print('❌ AI service error: $e');
       rethrow;
@@ -355,7 +312,83 @@ class TextToDesignController extends GetxController {
   void reset() {
     textController.clear();
     _generatedDesignUrl.value = null;
+    _generatedPreviewUrl.value = null;
+    _generatedDielineUrl.value = null;
+    _generatedDesignPreviewId.value = null;
     _isLoading.value = false;
+  }
+
+  String _resolveBagType() {
+    try {
+      final bagType = Get.find<CreateController>().resolvedBagType;
+      print('🎒 Text-to-design using bag_type: $bagType');
+      return bagType;
+    } catch (_) {
+      print('🎒 CreateController not found, fallback bag_type: gusset_fullwrap');
+      return 'gusset_fullwrap';
+    }
+  }
+
+  bool _hasPreviewId() {
+    final previewId = _generatedDesignPreviewId.value;
+    if (previewId == null || previewId.isEmpty) {
+      Fluttertoast.showToast(
+        msg: 'Preview ID not available. Please try again.',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return false;
+    }
+    return true;
+  }
+
+  Future<bool> _saveToYourDesign() async {
+    if (!_hasPreviewId()) return false;
+
+    try {
+      final yourDesignController = Get.isRegistered<YourDesignController>()
+          ? Get.find<YourDesignController>()
+          : Get.put(YourDesignController());
+
+      return await yourDesignController
+          .saveDesignToCollection(_generatedDesignPreviewId.value!);
+    } catch (_) {
+      Fluttertoast.showToast(
+        msg: 'Failed to save design',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return false;
+    }
+  }
+
+  Future<bool> _addToCollections() async {
+    if (!_hasPreviewId()) return false;
+
+    try {
+      final collectionsController = Get.isRegistered<CollectionsController>()
+          ? Get.find<CollectionsController>()
+          : Get.put(CollectionsController());
+
+      return await collectionsController
+          .saveDesignToCollection(_generatedDesignPreviewId.value!);
+    } catch (_) {
+      Fluttertoast.showToast(
+        msg: 'Failed to save design to collection',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
+      return false;
+    }
   }
   
   /// Gets the current word count

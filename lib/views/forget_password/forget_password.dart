@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:jeebz_bag_design_app/utils/app_colors.dart';
 import '../../controllers/forgot_password_controller/forgot_password_controller.dart';
 import '../../widgets/custom_back_button.dart';
+import '../../widgets/custom_button.dart';
 import '../../utils/app_fonts.dart';
 
 /// ForgotPasswordScreen - Password recovery screen
@@ -230,7 +230,7 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-/// Recovery method section with email option
+/// Recovery method section — email input field
 class _RecoveryMethodSection extends StatelessWidget {
   final ForgotPasswordController controller;
 
@@ -242,101 +242,74 @@ class _RecoveryMethodSection extends StatelessWidget {
       width: double.infinity,
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Obx(() => _EmailRecoveryOption(
-                controller: controller,
-                isSelected: controller.isEmailSelected,
-                maskedEmail: controller.maskedEmail,
-              )),
+          Text(
+            'Email',
+            style: AppFonts.poppinsMedium(
+              fontSize: 14.sp,
+              color: const Color(0xFF0F0F0F),
+            ),
+          ),
+          SizedBox(height: 8.h),
+          _EmailTextField(controller: controller),
         ],
       ),
     );
   }
 }
 
-/// Email recovery option widget
-class _EmailRecoveryOption extends StatelessWidget {
+/// Email text field widget
+class _EmailTextField extends StatelessWidget {
   final ForgotPasswordController controller;
-  final bool isSelected;
-  final String maskedEmail;
 
-  const _EmailRecoveryOption({
-    required this.controller,
-    required this.isSelected,
-    required this.maskedEmail,
-  });
+  const _EmailTextField({required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => controller.toggleEmailSelection(),
-      child: Container(
-        width: double.infinity,
-        height: 76.h,
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        decoration: ShapeDecoration(
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            side: BorderSide(
-              width: 1,
-              color: isSelected ? const Color(0xFF1F7CD5) : const Color(0xFFE0E0E0),
-            ),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
+    return Container(
+      width: double.infinity,
+      height: 52.h,
+      decoration: ShapeDecoration(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 1, color: Color(0xFFD2D6DB)),
+          borderRadius: BorderRadius.circular(8.r),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Email icon container
-            Container(
-              width: 44.w,
-              height: 44.h,
-              padding: EdgeInsets.all(8.w),
-              decoration: ShapeDecoration(
-                color: const Color(0xFFF0F6FF),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(31.r),
-                ),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.mark_email_unread_outlined,
-                  size: 24.sp,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            SizedBox(width: 8.w),
-            // Email details
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Via email',
-                    style: AppFonts.poppinsRegular(
-                      fontSize: 12.sp,
-                      color: const Color(0xFF9DA4AE),
-                    ).copyWith(height: 1.50),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    maskedEmail,
-                    style: AppFonts.poppinsSemiBold(
-                      fontSize: 14.sp,
-                      color: const Color(0xFF0F0F0F),
-                    ).copyWith(height: 1.29),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        shadows: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller.emailController,
+        keyboardType: TextInputType.emailAddress,
+        autofillHints: const [AutofillHints.email],
+        style: AppFonts.poppinsRegular(
+          fontSize: 14.sp,
+          color: const Color(0xFF0F0F0F),
+        ),
+        decoration: InputDecoration(
+          hintText: 'Enter your email address',
+          hintStyle: AppFonts.poppinsRegular(
+            fontSize: 14.sp,
+            color: const Color(0xFF9DA4AE),
+          ),
+          prefixIcon: Icon(
+            Icons.mark_email_unread_outlined,
+            size: 20.sp,
+            color: const Color(0xFF9DA4AE),
+          ),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16.w,
+            vertical: 14.h,
+          ),
         ),
       ),
     );
@@ -398,14 +371,15 @@ class _ContinueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() => GestureDetector(
-          onTap: controller.isLoading
+    return Obx(() => CircleFadeAnimation(
+          onPressed: controller.isLoading
               ? null
               : () => controller.handleContinue(context),
+          borderRadius: BorderRadius.circular(8.r),
+          splashColor: Colors.white,
           child: Container(
             width: 350.w,
             height: 52.h,
-            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
             decoration: ShapeDecoration(
               color: const Color(0xFF1F7CD5),
               shape: RoundedRectangleBorder(

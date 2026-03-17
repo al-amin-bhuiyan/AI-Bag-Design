@@ -3,12 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import '../../models/api_response_model.dart';
+import '../../models/reset_password_otp_model.dart';
+import '../../models/reset_password_model.dart';
 import '../../routes/app_path.dart';
+import '../../services/auth_service.dart';
 
-/// VerificationCodeController manages verification code screen logic and state
-/// Follows OOP principles with encapsulation and single responsibility
+/// VerificationCodeController - Manages OTP verification for forgot password flow
+/// POST /accounts/user/reset-password-otp/ → gets reset_token → navigate to set-new-password
+/// Resend OTP → POST /accounts/user/send-reset-password-email/
+/// Follows 100% OOP: encapsulation, single responsibility, composition
 class VerificationCodeController extends GetxController {
-  // Text editing controllers for 6 OTP fields
+  // ─── Dependencies ─────────────────────────────────────────────────────────
+  final AuthService _authService = AuthService.instance;
+
+  // ─── OTP Text Controllers ──────────────────────────────────────────────────
   final TextEditingController otp1Controller = TextEditingController();
   final TextEditingController otp2Controller = TextEditingController();
   final TextEditingController otp3Controller = TextEditingController();
@@ -16,7 +26,7 @@ class VerificationCodeController extends GetxController {
   final TextEditingController otp5Controller = TextEditingController();
   final TextEditingController otp6Controller = TextEditingController();
 
-  // Focus nodes for 6 OTP fields
+  // ─── Focus Nodes ──────────────────────────────────────────────────────────
   final FocusNode otp1FocusNode = FocusNode();
   final FocusNode otp2FocusNode = FocusNode();
   final FocusNode otp3FocusNode = FocusNode();
@@ -24,7 +34,7 @@ class VerificationCodeController extends GetxController {
   final FocusNode otp5FocusNode = FocusNode();
   final FocusNode otp6FocusNode = FocusNode();
 
-  // Observable state for each OTP field
+  // ─── Observable OTP digits ────────────────────────────────────────────────
   final RxString otp1 = ''.obs;
   final RxString otp2 = ''.obs;
   final RxString otp3 = ''.obs;
@@ -32,339 +42,265 @@ class VerificationCodeController extends GetxController {
   final RxString otp5 = ''.obs;
   final RxString otp6 = ''.obs;
 
-  // Observable state
+  // ─── Observable State ─────────────────────────────────────────────────────
   final RxBool _isLoading = false.obs;
   final RxString _email = ''.obs;
-  
-  // Timer state
   final RxInt _remainingSeconds = 60.obs;
-  final RxBool _canResend = true.obs; // Start as true - can resend immediately
+  final RxBool _canResend = true.obs;
   Timer? _timer;
 
-  // Form key for validation
+  // ─── Form ─────────────────────────────────────────────────────────────────
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
-  // Getters
+  // ─── Public Getters ───────────────────────────────────────────────────────
   bool get isLoading => _isLoading.value;
   String get email => _email.value;
-  String get fullOtp => '${otp1.value}${otp2.value}${otp3.value}${otp4.value}${otp5.value}${otp6.value}';
-  int get remainingSeconds => _remainingSeconds.value;
   bool get canResend => _canResend.value;
+  int get remainingSeconds => _remainingSeconds.value;
+  String get fullOtp =>
+      '${otp1.value}${otp2.value}${otp3.value}${otp4.value}${otp5.value}${otp6.value}';
   String get timerText {
-    final minutes = (_remainingSeconds.value ~/ 60).toString().padLeft(1, '0');
-    final seconds = (_remainingSeconds.value % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
+    final m = (_remainingSeconds.value ~/ 60).toString().padLeft(1, '0');
+    final s = (_remainingSeconds.value % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
-  @override
-  void onInit() {
-    super.onInit();
-    _initializeController();
-  }
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   @override
   void onClose() {
-    _disposeControllers();
+    _stopTimer();
+    otp1Controller.dispose(); otp2Controller.dispose(); otp3Controller.dispose();
+    otp4Controller.dispose(); otp5Controller.dispose(); otp6Controller.dispose();
+    otp1FocusNode.dispose();  otp2FocusNode.dispose();  otp3FocusNode.dispose();
+    otp4FocusNode.dispose();  otp5FocusNode.dispose();  otp6FocusNode.dispose();
     super.onClose();
   }
 
-  /// Initializes the controller
-  void _initializeController() {
-    // Load email from previous screen or storage
-    _loadEmail();
-    // Timer will start only when user presses resend
+  // ─── Public API ───────────────────────────────────────────────────────────
+
+  /// Sets email from route query parameter
+  void setEmail(String email) {
+    _email.value = email;
+    debugPrint('📧 VerificationCode: email set — $email');
   }
 
-  /// Loads email from storage or previous screen
-  void _loadEmail() {
-    // TODO: Get email from forgot password screen or shared preferences
-    // For now, using a placeholder
-    _email.value = 'mu***@gmail.com';
+  /// Handles single OTP field change — auto-moves focus
+  void onOtpChanged(String value, int index, BuildContext context) {
+    _updateOtpValue(value, index);
+    if (value.isNotEmpty && index < 6) _focusNext(index);
+    if (value.isEmpty && index > 1) _focusPrev(index);
   }
 
-  /// Starts the resend countdown timer
+  /// Pastes OTP from clipboard
+  Future<void> handlePasteFromClipboard(BuildContext context) async {
+    try {
+      final data = await Clipboard.getData(Clipboard.kTextPlain);
+      final digits = (data?.text ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length < 6) { _showError('Invalid OTP format — need 6 digits'); return; }
+      _fillAllOtpFields(digits);
+      otp6FocusNode.requestFocus();
+      _showInfo('Code pasted successfully');
+    } catch (_) {
+      _showError('Failed to paste code');
+    }
+  }
+
+  /// Verifies OTP — calls POST /accounts/user/reset-password-otp/
+  /// On success: navigates to SetNewPassword with reset_token
+  Future<void> verifyCode(BuildContext context) async {
+    if (fullOtp.length < 6) {
+      _showError('Please enter the complete 6-digit code');
+      return;
+    }
+    if (_email.value.isEmpty) {
+      _showError('Email not found. Please go back and try again.');
+      return;
+    }
+
+    _isLoading.value = true;
+    try {
+      debugPrint('🔐 Verifying reset OTP for: ${_email.value}');
+
+      final ApiResponse<ResetPasswordOtpResponseModel> response =
+          await _authService.verifyResetOtp(
+        email: _email.value,
+        otp: fullOtp,
+      );
+
+      if (response.success && response.data != null) {
+        final String resetToken = response.data!.resetToken;
+        debugPrint('✅ OTP verified — reset_token received');
+
+        _showSuccess('OTP verified successfully!');
+        await Future.delayed(const Duration(milliseconds: 600));
+
+        if (context.mounted) {
+          // Pass reset_token to set-new-password screen
+          context.push(
+            '${AppPath.setNewPassword}?reset_token=${Uri.encodeComponent(resetToken)}',
+          );
+        }
+      } else {
+        _showError(response.errorMessage ?? 'Invalid OTP. Please try again.');
+      }
+    } catch (e) {
+      debugPrint('❌ Verify OTP error: $e');
+      _showError('Verification failed. Please try again.');
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Resends OTP — calls POST /accounts/user/send-reset-password-email/
+  Future<void> resendCode(BuildContext context) async {
+    if (!_canResend.value) {
+      _showInfo('Please wait $timerText before resending');
+      return;
+    }
+    if (_email.value.isEmpty) {
+      _showError('Email not found. Please go back and try again.');
+      return;
+    }
+
+    _startTimer();
+    _isLoading.value = true;
+    try {
+      debugPrint('📨 Resending reset OTP to: ${_email.value}');
+
+      final ApiResponse<SendResetPasswordEmailResponseModel> response =
+          await _authService.sendResetPasswordEmail(email: _email.value);
+
+      if (response.success && response.data != null) {
+        _clearAllFields();
+        _showSuccess(response.data!.message.isNotEmpty
+            ? response.data!.message
+            : 'OTP sent to your email');
+        otp1FocusNode.requestFocus();
+      } else {
+        _showError(response.errorMessage ?? 'Failed to resend OTP. Try again.');
+        _stopTimer();
+        _canResend.value = true;
+      }
+    } catch (e) {
+      debugPrint('❌ Resend OTP error: $e');
+      _showError('Failed to resend OTP. Please try again.');
+      _stopTimer();
+      _canResend.value = true;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  /// Navigates back
+  void navigateBack(BuildContext context) {
+    if (context.mounted) context.pop();
+  }
+
+  // ─── Private Helpers ──────────────────────────────────────────────────────
+
+  void _updateOtpValue(String value, int index) {
+    switch (index) {
+      case 1: otp1.value = value; break;
+      case 2: otp2.value = value; break;
+      case 3: otp3.value = value; break;
+      case 4: otp4.value = value; break;
+      case 5: otp5.value = value; break;
+      case 6: otp6.value = value; break;
+    }
+  }
+
+  void _focusNext(int i) {
+    switch (i) {
+      case 1: otp2FocusNode.requestFocus(); break;
+      case 2: otp3FocusNode.requestFocus(); break;
+      case 3: otp4FocusNode.requestFocus(); break;
+      case 4: otp5FocusNode.requestFocus(); break;
+      case 5: otp6FocusNode.requestFocus(); break;
+    }
+  }
+
+  void _focusPrev(int i) {
+    switch (i) {
+      case 2: otp1FocusNode.requestFocus(); break;
+      case 3: otp2FocusNode.requestFocus(); break;
+      case 4: otp3FocusNode.requestFocus(); break;
+      case 5: otp4FocusNode.requestFocus(); break;
+      case 6: otp5FocusNode.requestFocus(); break;
+    }
+  }
+
+  void _fillAllOtpFields(String digits) {
+    final controllers = [otp1Controller, otp2Controller, otp3Controller,
+                         otp4Controller, otp5Controller, otp6Controller];
+    final observables = [otp1, otp2, otp3, otp4, otp5, otp6];
+    for (int i = 0; i < 6; i++) {
+      controllers[i].text = digits[i];
+      observables[i].value = digits[i];
+    }
+  }
+
+  void _clearAllFields() {
+    for (final c in [otp1Controller, otp2Controller, otp3Controller,
+                     otp4Controller, otp5Controller, otp6Controller]) {
+      c.clear();
+    }
+    for (final o in [otp1, otp2, otp3, otp4, otp5, otp6]) {
+      o.value = '';
+    }
+  }
+
   void _startTimer() {
     _remainingSeconds.value = 60;
     _canResend.value = false;
-    
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_remainingSeconds.value > 0) {
         _remainingSeconds.value--;
       } else {
         _canResend.value = true;
-        timer.cancel();
+        t.cancel();
       }
     });
   }
 
-  /// Stops the timer
   void _stopTimer() {
     _timer?.cancel();
     _timer = null;
   }
 
-  /// Sets email from route parameter
-  void setEmail(String email) {
-    _email.value = email;
-  }
+  // ─── Toast Helpers ────────────────────────────────────────────────────────
 
-  /// Handles OTP field change
-  void onOtpChanged(String value, int index, BuildContext context) {
-    // Update corresponding observable
-    switch (index) {
-      case 1:
-        otp1.value = value;
-        break;
-      case 2:
-        otp2.value = value;
-        break;
-      case 3:
-        otp3.value = value;
-        break;
-      case 4:
-        otp4.value = value;
-        break;
-      case 5:
-        otp5.value = value;
-        break;
-      case 6:
-        otp6.value = value;
-        break;
-    }
-
-    // Auto-focus next field if value entered
-    if (value.isNotEmpty && index < 6) {
-      _focusNextField(index);
-    }
-    
-    // Auto-focus previous field if backspace
-    if (value.isEmpty && index > 1) {
-      _focusPreviousField(index);
-    }
-  }
-
-  /// Focuses next OTP field
-  void _focusNextField(int currentIndex) {
-    switch (currentIndex) {
-      case 1:
-        otp2FocusNode.requestFocus();
-        break;
-      case 2:
-        otp3FocusNode.requestFocus();
-        break;
-      case 3:
-        otp4FocusNode.requestFocus();
-        break;
-      case 4:
-        otp5FocusNode.requestFocus();
-        break;
-      case 5:
-        otp6FocusNode.requestFocus();
-        break;
-    }
-  }
-
-  /// Focuses previous OTP field
-  void _focusPreviousField(int currentIndex) {
-    switch (currentIndex) {
-      case 2:
-        otp1FocusNode.requestFocus();
-        break;
-      case 3:
-        otp2FocusNode.requestFocus();
-        break;
-      case 4:
-        otp3FocusNode.requestFocus();
-        break;
-      case 5:
-        otp4FocusNode.requestFocus();
-        break;
-      case 6:
-        otp5FocusNode.requestFocus();
-        break;
-    }
-  }
-
-  /// Handles paste from clipboard
-  Future<void> handlePasteFromClipboard(BuildContext context) async {
-    try {
-      final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-      final pastedText = clipboardData?.text ?? '';
-
-      if (pastedText.isEmpty) {
-        _showMessage('Clipboard is empty');
-        return;
-      }
-
-      // Extract only digits
-      final digits = pastedText.replaceAll(RegExp(r'[^0-9]'), '');
-
-      if (digits.length < 6) {
-        _showMessage('Invalid code format');
-        return;
-      }
-
-      // Fill OTP fields
-      otp1Controller.text = digits[0];
-      otp1.value = digits[0];
-
-      otp2Controller.text = digits[1];
-      otp2.value = digits[1];
-
-      otp3Controller.text = digits[2];
-      otp3.value = digits[2];
-
-      otp4Controller.text = digits[3];
-      otp4.value = digits[3];
-
-      otp5Controller.text = digits[4];
-      otp5.value = digits[4];
-
-      otp6Controller.text = digits[5];
-      otp6.value = digits[5];
-
-      // Focus last field
-      otp6FocusNode.requestFocus();
-
-      _showMessage('Code pasted successfully');
-    } catch (e) {
-      _showMessage('Failed to paste code');
-    }
-  }
-
-  /// Verifies the OTP code
-  Future<void> verifyCode(BuildContext context) async {
-    // Check if all fields are filled
-    if (fullOtp.length < 6) {
-      _showMessage('Please enter complete 6-digit code');
-      return;
-    }
-
-    _setLoading(true);
-
-    try {
-      // Simulate API call
-    //await _verifyOtpCode(fullOtp);
-
-      if (context.mounted) {
-        _showMessage('Code verified successfully!');
-        // Navigate to change password screen
-        context.push(AppPath.changePassword);
-      }
-    } catch (e) {
-      _showMessage('Invalid verification code. Please try again.');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// API call to verify OTP code (placeholder)
-  Future<void> _verifyOtpCode(String code) async {
-    // TODO: Implement actual API call
-    await Future.delayed(const Duration(seconds: 2));
-    
-    // Simulate verification
-    if (code != '554000') { // Just for testing
-      throw Exception('Invalid code');
-    }
-  }
-
-  /// Resends verification code
-  Future<void> resendCode(BuildContext context) async {
-    if (!_canResend.value) {
-      _showMessage('Please wait ${timerText} before resending');
-      return;
-    }
-
-    // Start timer immediately
-    _startTimer();
-    
-    _setLoading(true);
-
-    try {
-      // Simulate API call
-      await _resendOtpCode();
-
-      // Clear all fields
-      _clearAllFields();
-
-      _showMessage('Verification code sent to your email');
-      
-      // Focus first field
-      otp1FocusNode.requestFocus();
-    } catch (e) {
-      _showMessage('Failed to resend code. Please try again.');
-      // If failed, stop timer and allow retry
-      _stopTimer();
-      _canResend.value = true;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// API call to resend OTP code (placeholder)
-  Future<void> _resendOtpCode() async {
-    // TODO: Implement actual API call
-    await Future.delayed(const Duration(seconds: 2));
-  }
-
-  /// Clears all OTP fields
-  void _clearAllFields() {
-    otp1Controller.clear();
-    otp2Controller.clear();
-    otp3Controller.clear();
-    otp4Controller.clear();
-    otp5Controller.clear();
-    otp6Controller.clear();
-
-    otp1.value = '';
-    otp2.value = '';
-    otp3.value = '';
-    otp4.value = '';
-    otp5.value = '';
-    otp6.value = '';
-  }
-
-  /// Sets loading state
-  void _setLoading(bool value) {
-    _isLoading.value = value;
-  }
-
-  /// Shows a message to the user
-  void _showMessage(String message) {
-    Get.snackbar(
-      'Info',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 3),
+  void _showError(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFFF44336),
+      textColor: Colors.white,
+      fontSize: 15.0,
     );
   }
 
-  /// Navigates back to previous screen
-  void navigateBack(BuildContext context) {
-    if (context.mounted) {
-      context.pop();
-    }
+  void _showSuccess(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF4CAF50),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
   }
 
-  /// Disposes all controllers and focus nodes
-  void _disposeControllers() {
-    // Cancel timer
-    _stopTimer();
-    
-    otp1Controller.dispose();
-    otp2Controller.dispose();
-    otp3Controller.dispose();
-    otp4Controller.dispose();
-    otp5Controller.dispose();
-    otp6Controller.dispose();
-
-    otp1FocusNode.dispose();
-    otp2FocusNode.dispose();
-    otp3FocusNode.dispose();
-    otp4FocusNode.dispose();
-    otp5FocusNode.dispose();
-    otp6FocusNode.dispose();
+  void _showInfo(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF2196F3),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
   }
 }

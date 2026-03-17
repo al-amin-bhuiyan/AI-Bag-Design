@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import '../../controllers/your_design_controller/your_design_controller.dart';
 import '../../routes/app_path.dart';
+import '../../utils/app_constants.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_fonts.dart';
+import '../../widgets/custom_button.dart';
 import '../../widgets/custom_nav_bar_widgets.dart';
 
 /// YourDesignScreen - Displays user's design projects
@@ -34,40 +37,36 @@ class YourDesignScreen extends StatelessWidget {
                   return const _LoadingView();
                 }
                 
-                return RefreshIndicator(
-                  onRefresh: controller.refresh,
-                  color: AppColors.primary,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 26.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 8.h),
-                        
-                        // All Projects Title
-                        _AllProjectsTitle(),
-                        
-                        SizedBox(height: 16.h),
-                        
-                        // Search Bar
-                        _SearchBar(controller: controller),
-                        
-                        SizedBox(height: 24.h),
-                        
-                        // Recents Header with View Toggle
-                        _RecentsHeader(controller: controller),
-                        
-                        SizedBox(height: 16.h),
-                        
-                        // Projects List/Grid
-                        Obx(() => controller.isGridView
-                            ? _ProjectsGridView(controller: controller)
-                            : _ProjectsListView(controller: controller)),
-                        
-                        SizedBox(height: 100.h),
-                      ],
-                    ),
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.symmetric(horizontal: 26.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 8.h),
+                      
+                      // All Projects Title
+                      _AllProjectsTitle(),
+                      
+                      SizedBox(height: 16.h),
+                      
+                      // Search Bar
+                      _SearchBar(controller: controller),
+                      
+                      SizedBox(height: 24.h),
+                      
+                      // Recents Header with View Toggle
+                      _RecentsHeader(controller: controller),
+                      
+                      SizedBox(height: 16.h),
+                      
+                      // Projects List/Grid
+                      Obx(() => controller.isGridView
+                          ? _ProjectsGridView(controller: controller)
+                          : _ProjectsListView(controller: controller)),
+                      
+                      SizedBox(height: 100.h),
+                    ],
                   ),
                 );
               }),
@@ -94,7 +93,9 @@ class YourDesignScreen extends StatelessWidget {
         context.go(AppPath.collection);
         break;
       case 2:
-        // Your Design - Already here, do nothing
+        // Re-fetch backend data when re-tapping this tab.
+        final controller = Get.find<YourDesignController>();
+        controller.refresh();
         break;
       case 3:
         // Profile
@@ -102,6 +103,107 @@ class YourDesignScreen extends StatelessWidget {
         break;
     }
   }
+}
+
+String _resolveProjectImagePath(String imagePath) {
+  final path = imagePath.trim();
+  if (path.isEmpty) return path;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  if (path.startsWith('/')) return '${AppConstants.baseUrl}$path';
+  return path;
+}
+
+ImageProvider _resolveProjectImageProvider(String resolvedImagePath) {
+  final isNetworkImage = resolvedImagePath.startsWith('http://') ||
+      resolvedImagePath.startsWith('https://');
+  final isFileImage = !isNetworkImage &&
+      (resolvedImagePath.startsWith('/') ||
+          resolvedImagePath.contains('storage') ||
+          resolvedImagePath.contains('data/user'));
+
+  if (isNetworkImage) return NetworkImage(resolvedImagePath);
+  if (isFileImage) return FileImage(File(resolvedImagePath));
+  return AssetImage(resolvedImagePath);
+}
+
+void _showProjectImagePreview(BuildContext context, String imagePath) {
+  final resolvedImagePath = _resolveProjectImagePath(imagePath);
+  if (resolvedImagePath.isEmpty) return;
+
+  final imageProvider = _resolveProjectImageProvider(resolvedImagePath);
+
+  showDialog(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.85),
+    builder: (dialogContext) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 1.0,
+                maxScale: 5.0,
+                child: Image(
+                  image: imageProvider,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: double.infinity,
+                      height: 220.h,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        size: 42.sp,
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8.h,
+              right: 8.w,
+              child: CircleFadeAnimation(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                borderRadius: BorderRadius.circular(100),
+                splashColor: Colors.white,
+                child: Container(
+                  width: 36.w,
+                  height: 36.h,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.close,
+                    color: Colors.white,
+                    size: 20.sp,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+const Map<String, String> _bagTypeDisplayNames = {
+  'gusset_fullwrap': 'Gusset Full Bag',
+  'gusset_label': 'Gusset Label Bag',
+  'foil_fullwrap': 'Foil Full Bag',
+  'foil_label': 'Foil Label Bag',
+  'quad_fullwrap': 'Quad Full Bag',
+  'quad_label': 'Quad Label Bag',
+};
+
+String _resolveProjectTitle(String rawTitle) {
+  final normalized = rawTitle.trim().toLowerCase();
+  return _bagTypeDisplayNames[normalized] ?? rawTitle;
 }
 
 /// App Bar Widget
@@ -178,6 +280,7 @@ class _SearchBar extends StatelessWidget {
           SizedBox(width: 8.w),
           Expanded(
             child: TextField(
+              controller: controller.searchTextController,
               onChanged: controller.updateSearchQuery,
               style: AppFonts.interRegular(
                 fontSize: 14.sp,
@@ -195,6 +298,18 @@ class _SearchBar extends StatelessWidget {
               ),
             ),
           ),
+          Obx(() {
+            final hasQuery = controller.searchQuery.trim().isNotEmpty;
+            if (!hasQuery) return const SizedBox.shrink();
+            return GestureDetector(
+              onTap: controller.clearSearchQuery,
+              child: Icon(
+                Icons.close,
+                size: 20.sp,
+                color: const Color(0xFF6B7280),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -219,8 +334,10 @@ class _RecentsHeader extends StatelessWidget {
             color: const Color(0xFF0F0F0F),
           ).copyWith(height: 1.33),
         ),
-        Obx(() => GestureDetector(
-          onTap: controller.toggleView,
+        Obx(() => CircleFadeAnimation(
+          onPressed: controller.toggleView,
+          borderRadius: BorderRadius.circular(4.r),
+          splashColor: AppColors.primary,
           child: Container(
             width: 24.w,
             height: 24.h,
@@ -248,53 +365,55 @@ class _ProjectsGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final projects = controller.projects;
-    
-    if (projects.isEmpty) {
-      return const _EmptyView();
-    }
-    
-    return Column(
-      children: List.generate(
-        (projects.length / 2).ceil(),
-        (rowIndex) {
-          final leftIndex = rowIndex * 2;
-          final rightIndex = leftIndex + 1;
-          
-          return Padding(
-            padding: EdgeInsets.only(bottom: 20.h),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (leftIndex < projects.length)
-                  Expanded(
-                    child: _ProjectGridItem(
-                      controller: controller,
-                      project: projects[leftIndex],
+    return Obx(() {
+      final projects = controller.projects;
+
+      if (projects.isEmpty) {
+        return const _EmptyView();
+      }
+
+      return Column(
+        children: List.generate(
+          (projects.length / 2).ceil(),
+          (rowIndex) {
+            final leftIndex = rowIndex * 2;
+            final rightIndex = leftIndex + 1;
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: 20.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (leftIndex < projects.length)
+                    Expanded(
+                      child: _ProjectGridItem(
+                        controller: controller,
+                        project: projects[leftIndex],
+                      ),
                     ),
-                  ),
-                if (rightIndex < projects.length) ...[
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: _ProjectGridItem(
-                      controller: controller,
-                      project: projects[rightIndex],
+                  if (rightIndex < projects.length) ...[
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: _ProjectGridItem(
+                        controller: controller,
+                        project: projects[rightIndex],
+                      ),
                     ),
-                  ),
-                ] else
-                  const Expanded(child: SizedBox()),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+                  ] else
+                    const Expanded(child: SizedBox()),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    });
   }
 }
 
-/// Project Grid Item
-class _ProjectGridItem extends StatelessWidget {
+/// Project Grid Item with lazy loading
+class _ProjectGridItem extends StatefulWidget {
   final YourDesignController controller;
   final DesignProject project;
   
@@ -304,11 +423,68 @@ class _ProjectGridItem extends StatelessWidget {
   });
 
   @override
+  State<_ProjectGridItem> createState() => _ProjectGridItemState();
+}
+
+class _ProjectGridItemState extends State<_ProjectGridItem> {
+  bool _isVisible = false;
+  bool _hasBeenVisible = false;
+
+  @override
   Widget build(BuildContext context) {
-    // Check if image is from file system or assets
-    final isFileImage = project.imagePath.startsWith('/') || 
-                        project.imagePath.contains('storage') ||
-                        project.imagePath.contains('data/user');
+    return VisibilityDetector(
+      key: Key('project_grid_${widget.project.id}'),
+      onVisibilityChanged: (VisibilityInfo info) {
+        if (info.visibleFraction > 0.1 && !_hasBeenVisible) {
+          setState(() {
+            _isVisible = true;
+            _hasBeenVisible = true;
+          });
+          debugPrint('📦 Grid project loaded: ${widget.project.title}');
+        }
+      },
+      child: AnimatedOpacity(
+        opacity: _isVisible ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeIn,
+        child: AnimatedSlide(
+          offset: _isVisible ? Offset.zero : const Offset(0, 0.1),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+          child: _isVisible
+              ? _ProjectGridItemContent(
+                  controller: widget.controller,
+                  project: widget.project,
+                )
+              : SizedBox(
+                  height: 220.h,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF1F7CD5),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Project Grid Item Content
+class _ProjectGridItemContent extends StatelessWidget {
+  final YourDesignController controller;
+  final DesignProject project;
+  
+  const _ProjectGridItemContent({
+    required this.controller,
+    required this.project,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedImagePath = _resolveProjectImagePath(project.imagePath);
+    final imageProvider = _resolveProjectImageProvider(resolvedImagePath);
     
     return GestureDetector(
       onTap: () => controller.openProject(project),
@@ -318,22 +494,23 @@ class _ProjectGridItem extends StatelessWidget {
           // Project Image with More Button
           Stack(
             children: [
-              Container(
-                width: double.infinity,
-                height: 150.h,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8.r),
-                  image: DecorationImage(
-                    image: isFileImage 
-                        ? FileImage(File(project.imagePath))
-                        : AssetImage(project.imagePath) as ImageProvider,
-                    fit: BoxFit.cover,
+              GestureDetector(
+                onTap: () => _showProjectImagePreview(context, project.imagePath),
+                child: Container(
+                  width: double.infinity,
+                  height: 150.h,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8.r),
+                    image: DecorationImage(
+                      image: imageProvider,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
               Positioned(
-                top: 8.h,
-                right: 8.w,
+                top: 2.h,
+                right: 2.w,
                 child: _ProjectOptionsButton(
                   controller: controller,
                   project: project,
@@ -346,7 +523,7 @@ class _ProjectGridItem extends StatelessWidget {
           
           // Project Title
           Text(
-            project.title,
+            _resolveProjectTitle(project.title),
             style: AppFonts.poppinsSemiBold(
               fontSize: 14.sp,
               color: const Color(0xFF0F0F0F),
@@ -373,28 +550,30 @@ class _ProjectsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final projects = controller.projects;
-    
-    if (projects.isEmpty) {
-      return const _EmptyView();
-    }
-    
-    return Column(
-      children: projects.map((project) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: 20.h),
-          child: _ProjectListItem(
-            controller: controller,
-            project: project,
-          ),
-        );
-      }).toList(),
-    );
+    return Obx(() {
+      final projects = controller.projects;
+
+      if (projects.isEmpty) {
+        return const _EmptyView();
+      }
+
+      return Column(
+        children: projects.map((project) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: 20.h),
+            child: _ProjectListItem(
+              controller: controller,
+              project: project,
+            ),
+          );
+        }).toList(),
+      );
+    });
   }
 }
 
-/// Project List Item
-class _ProjectListItem extends StatelessWidget {
+/// Project List Item with lazy loading
+class _ProjectListItem extends StatefulWidget {
   final YourDesignController controller;
   final DesignProject project;
   
@@ -404,27 +583,85 @@ class _ProjectListItem extends StatelessWidget {
   });
 
   @override
+  State<_ProjectListItem> createState() => _ProjectListItemState();
+}
+
+class _ProjectListItemState extends State<_ProjectListItem> {
+  bool _isVisible = false;
+  bool _hasBeenVisible = false;
+
+  @override
   Widget build(BuildContext context) {
-    // Check if image is from file system or assets
-    final isFileImage = project.imagePath.startsWith('/') || 
-                        project.imagePath.contains('storage') ||
-                        project.imagePath.contains('data/user');
+    return VisibilityDetector(
+      key: Key('project_list_${widget.project.id}'),
+      onVisibilityChanged: (VisibilityInfo info) {
+        if (info.visibleFraction > 0.1 && !_hasBeenVisible) {
+          setState(() {
+            _isVisible = true;
+            _hasBeenVisible = true;
+          });
+          debugPrint('📦 List project loaded: ${widget.project.title}');
+        }
+      },
+      child: AnimatedOpacity(
+        opacity: _isVisible ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeIn,
+        child: AnimatedSlide(
+          offset: _isVisible ? Offset.zero : const Offset(0, 0.1),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+          child: _isVisible
+              ? _ProjectListItemContent(
+                  controller: widget.controller,
+                  project: widget.project,
+                )
+              : SizedBox(
+                  height: 5.h,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF1F7CD5),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Project List Item Content
+class _ProjectListItemContent extends StatelessWidget {
+  final YourDesignController controller;
+  final DesignProject project;
+  
+  const _ProjectListItemContent({
+    required this.controller,
+    required this.project,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedImagePath = _resolveProjectImagePath(project.imagePath);
+    final imageProvider = _resolveProjectImageProvider(resolvedImagePath);
     
     return GestureDetector(
       onTap: () => controller.openProject(project),
       child: Row(
         children: [
           // Project Thumbnail
-          Container(
-            width: 70.w,
-            height: 70.h,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4.r),
-              image: DecorationImage(
-                image: isFileImage 
-                    ? FileImage(File(project.imagePath))
-                    : AssetImage(project.imagePath) as ImageProvider,
-                fit: BoxFit.cover,
+          GestureDetector(
+            onTap: () => _showProjectImagePreview(context, project.imagePath),
+            child: Container(
+              width: 70.w,
+              height: 70.h,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4.r),
+                image: DecorationImage(
+                  image: imageProvider,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),
@@ -438,7 +675,7 @@ class _ProjectListItem extends StatelessWidget {
               children: [
                 // Project Title
                 Text(
-                  project.title,
+                  _resolveProjectTitle(project.title),
                   style: AppFonts.poppinsSemiBold(
                     fontSize: 16.sp,
                     color: const Color(0xFF0F0F0F),
@@ -581,6 +818,8 @@ class _ProjectOptionsButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
       icon: Icon(
         Icons.more_vert,
         size: 24.sp,
@@ -592,33 +831,11 @@ class _ProjectOptionsButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(8.r),
       ),
       onSelected: (value) {
-        if (value == 'download') {
-          controller.downloadProject(project);
-        } else if (value == 'delete') {
+        if (value == 'delete') {
           _showDeleteConfirmation(context, controller, project);
         }
       },
       itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'download',
-          child: Row(
-            children: [
-              Icon(
-                Icons.download,
-                size: 20.sp,
-                color: const Color(0xFF0F0F0F),
-              ),
-              SizedBox(width: 12.w),
-              Text(
-                'Download',
-                style: AppFonts.interRegular(
-                  fontSize: 14.sp,
-                  color: const Color(0xFF0F0F0F),
-                ),
-              ),
-            ],
-          ),
-        ),
         PopupMenuItem(
           value: 'delete',
           child: Row(
@@ -660,7 +877,7 @@ class _ProjectOptionsButton extends StatelessWidget {
           ),
         ),
         content: Text(
-          'Are you sure you want to delete "${project.title}"? This action cannot be undone.',
+          'Are you sure you want to delete "${_resolveProjectTitle(project.title)}"? This action cannot be undone.',
           style: AppFonts.interRegular(
             fontSize: 14.sp,
             color: const Color(0xFF0F0F0F),

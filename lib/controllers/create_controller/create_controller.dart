@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import '../../utils/bag_type_mapper.dart';
 import '../../widgets/product_selection_dialog.dart';
 
 /// CreateController manages the create screen state and business logic
@@ -35,6 +37,20 @@ class CreateController extends GetxController {
   
   /// Check if specific row is selected
   bool isRowSelected(int row) => _selectedProductRow.value == row;
+
+  /// Resolves the API bag_type string based on current UI selection.
+  /// Uses BagTypeMapper to map (isFullGraphic + productRow) → API value.
+  /// Returns default 'gusset_fullwrap' if nothing is selected.
+  String get resolvedBagType {
+    final row = _selectedProductRow.value;
+    if (row == null) return BagTypeMapper.defaultBagType;
+    final bagType = BagTypeMapper.resolve(
+      isFullGraphic: _selectedOption.value == CreationOption.fullGraphic,
+      productRow: row,
+    );
+    print('🎒 Resolved bag_type: $bagType (${BagTypeMapper.describe(bagType)})');
+    return bagType;
+  }
   
   // ============ LIFECYCLE METHODS ============
   
@@ -66,14 +82,28 @@ class CreateController extends GetxController {
   
   /// Handles full graphic bag creation
   void createFullGraphicBag() {
-    // Set selected option
-    _selectedOption.value = CreationOption.fullGraphic;
+    // ✅ Toggle: if already selected, deselect
+    if (_selectedOption.value == CreationOption.fullGraphic) {
+      _selectedOption.value = null;
+      _isUploadAnimating.value = false;
+      _isGenerateAnimating.value = false;
+      _selectedProductRow.value = null;
+    } else {
+      _selectedOption.value = CreationOption.fullGraphic;
+    }
   }
-  
+
   /// Handles label bag creation
   void createLabelBag() {
-    // Set selected option
-    _selectedOption.value = CreationOption.label;
+    // ✅ Toggle: if already selected, deselect
+    if (_selectedOption.value == CreationOption.label) {
+      _selectedOption.value = null;
+      _isUploadAnimating.value = false;
+      _isGenerateAnimating.value = false;
+      _selectedProductRow.value = null;
+    } else {
+      _selectedOption.value = CreationOption.label;
+    }
   }
   
   // ============ CREATION OPTION METHODS ============
@@ -204,7 +234,7 @@ class CreateController extends GetxController {
         context.push('/text-to-design');
       }
       
-      _showMessage('Product selected successfully!');
+      _showSuccess('Product selected successfully!');
       
       // Reset animation states (but keep product selection)
       _isUploadAnimating.value = false;
@@ -223,13 +253,27 @@ class CreateController extends GetxController {
     _isLoading.value = value;
   }
   
-  /// Shows a message to the user
+  /// Shows an error/warning message to the user
   void _showMessage(String message) {
-    Get.snackbar(
-      'Info',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFFF44336), // Red for error/warning
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
+  }
+  
+  /// Shows a success message to the user
+  void _showSuccess(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF4CAF50), // Green for success
+      textColor: Colors.white,
+      fontSize: 15.0,
     );
   }
   

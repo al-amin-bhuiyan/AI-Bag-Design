@@ -1,126 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import '../../models/api_response_model.dart';
+import '../../models/reset_password_model.dart';
 import '../../routes/app_path.dart';
+import '../../services/auth_service.dart';
 
-/// ForgotPasswordController manages forgot password screen logic and state
-/// Follows OOP principles with encapsulation and single responsibility
+/// ForgotPasswordController - Manages forgot password screen logic and state
+/// Calls real POST /accounts/user/send-reset-password-email/ API
+/// Follows 100% OOP: encapsulation, single responsibility, composition
 class ForgotPasswordController extends GetxController {
-  // Observable state
-  final RxBool _isLoading = false.obs;
-  final RxBool _isEmailSelected = true.obs;
-  final RxString _maskedEmail = ''.obs;
+  // ─── Dependencies ─────────────────────────────────────────────────────────
+  final AuthService _authService = AuthService.instance;
 
-  // Getters
+  // ─── Email TextField controller ───────────────────────────────────────────
+  final TextEditingController emailController = TextEditingController();
+
+  // ─── Observable State ─────────────────────────────────────────────────────
+  final RxBool _isLoading = false.obs;
+
+  // ─── Public Getters ───────────────────────────────────────────────────────
   bool get isLoading => _isLoading.value;
-  bool get isEmailSelected => _isEmailSelected.value;
-  String get maskedEmail => _maskedEmail.value;
+  String get email => emailController.text.trim();
+
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   @override
-  void onInit() {
-    super.onInit();
-    _initializeController();
+  void onClose() {
+    emailController.dispose();
+    super.onClose();
   }
 
-  /// Initializes the controller
-  void _initializeController() {
-    _loadUserEmail();
-  }
+  // ─── Validation ───────────────────────────────────────────────────────────
 
-  /// Loads user email from login controller or storage
-  void _loadUserEmail() {
-    // TODO: Get email from login controller or shared preferences
-    // For now, using a placeholder
-    final email = _getStoredEmail();
-    _maskedEmail.value = _maskEmail(email);
-  }
-
-  /// Gets stored email (placeholder implementation)
-  String _getStoredEmail() {
-    // TODO: Implement actual email retrieval from storage or login controller
-    // This could be from GetX controller or shared preferences
-    return 'mustakim@gmail.com';
-  }
-
-  /// Masks email for display (e.g., mu***@gmail.com)
-  String _maskEmail(String email) {
-    if (email.isEmpty) return '';
-    
-    final parts = email.split('@');
-    if (parts.length != 2) return email;
-    
-    final username = parts[0];
-    final domain = parts[1];
-    
-    if (username.length <= 2) {
-      return '$username***@$domain';
+  /// Validates email format
+  String? validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Email is required';
     }
-    
-    final visiblePart = username.substring(0, 2);
-    return '$visiblePart***@$domain';
+    final emailRegex = RegExp(r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value.trim())) {
+      return 'Please enter a valid email';
+    }
+    return null;
   }
 
-  /// Toggles email selection
-  void toggleEmailSelection() {
-    _isEmailSelected.value = !_isEmailSelected.value;
-  }
+  // ─── Public Methods ───────────────────────────────────────────────────────
 
-  /// Handles continue button press
+  /// Handles continue button press — validates then calls real API
   Future<void> handleContinue(BuildContext context) async {
-    if (!_isEmailSelected.value) {
-      _showMessage('Please select a recovery method');
+    final error = validateEmail(email);
+    if (error != null) {
+      _showError(error);
       return;
     }
 
-    _setLoading(true);
+    _isLoading.value = true;
 
     try {
-      // Simulate API call
-      await _sendPasswordResetEmail();
-      
-      if (context.mounted) {
-        // Navigate to verification code screen
-        final email = _getStoredEmail();
-        context.push('${AppPath.verificationCode}?email=$email');
+      debugPrint('📤 Sending reset password OTP to: $email');
+
+      final ApiResponse<SendResetPasswordEmailResponseModel> response =
+          await _authService.sendResetPasswordEmail(email: email);
+
+      if (response.success && response.data != null) {
+        final String msg = response.data!.message;
+        debugPrint('✅ $msg');
+
+        _showSuccess(msg);
+
+        await Future.delayed(const Duration(milliseconds: 600));
+
+        if (context.mounted) {
+          context.push(
+            '${AppPath.verificationCode}?email=${Uri.encodeComponent(email)}',
+          );
+        }
+      } else {
+        _showError(response.errorMessage ??
+            'Failed to send reset email. Please try again.');
       }
     } catch (e) {
-      _showMessage('Failed to send reset link. Please try again.');
+      debugPrint('❌ ForgotPassword error: $e');
+      _showError('Something went wrong. Please try again.');
     } finally {
-      _setLoading(false);
+      _isLoading.value = false;
     }
-  }
-
-  /// Sends password reset email (API call placeholder)
-  Future<void> _sendPasswordResetEmail() async {
-    // TODO: Implement actual API call
-    await Future.delayed(const Duration(seconds: 2));
-  }
-
-  /// Sets loading state
-  void _setLoading(bool value) {
-    _isLoading.value = value;
-  }
-
-  /// Shows a message to the user
-  void _showMessage(String message) {
-    Get.snackbar(
-      'Info',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 3),
-    );
   }
 
   /// Navigates back to previous screen
   void navigateBack(BuildContext context) {
-    if (context.mounted) {
-      context.pop();
-    }
+    if (context.mounted) context.pop();
   }
 
-  @override
-  void onClose() {
-    // Clean up any resources if needed
-    super.onClose();
+  // ─── Toast Helpers ────────────────────────────────────────────────────────
+
+  void _showError(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFFF44336),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
+  }
+
+  void _showSuccess(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF4CAF50),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
   }
 }

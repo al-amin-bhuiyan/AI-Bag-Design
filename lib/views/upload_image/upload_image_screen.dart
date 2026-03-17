@@ -5,12 +5,15 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/upload_image_controller/upload_image_controller.dart';
+import '../../controllers/create_controller/create_controller.dart';
 import '../../utils/app_fonts.dart';
+import '../../widgets/custom_button.dart';
 import '../../widgets/dotted_border.dart';
 import '../../widgets/custom_back_button.dart';
 import '../../widgets/custom_assets.dart';
 import '../../widgets/custom_snackbar.dart';
 import '../../widgets/mockup_dialog.dart';
+import '../../widgets/ai_generation_loading_widget.dart';
 import '../../routes/app_path.dart';
 
 /// UploadImageScreen - Screen for uploading images to create bag design
@@ -120,8 +123,10 @@ class _AppBarState extends State<_AppBar> with SingleTickerProviderStateMixin {
               ),
               
               // Refresh Button with Rotation Animation
-              GestureDetector(
-                onTap: _handleRefresh,
+              CircleFadeAnimation(
+                onPressed: _handleRefresh,
+                borderRadius: BorderRadius.circular(100),
+                splashColor: Colors.black,
                 child: Container(
                   width: 40.w,
                   height: 40.h,
@@ -368,29 +373,8 @@ class _ImagePreviewContent extends StatelessWidget {
             // Show Bag Design Button
             GestureDetector(
               onTap: () async {
-                controller.showBagDesign(context);
-                // Show mockup dialog
-                await MockupDialog.show(
-                  context,
-                  onSaveImages: () async {
-                    await controller.saveMockupImages();
-                    if (context.mounted) {
-                      CustomSnackBar.showSuccess(
-                        context,
-                        message: 'Mockup image saved to gallery!',
-                      );
-                    }
-                  },
-                  onAddToCollections: () async {
-                    await controller.addMockupToCollections();
-                    if (context.mounted) {
-                      CustomSnackBar.showSuccess(
-                        context,
-                        message: 'Mockup added to collections!',
-                      );
-                    }
-                  },
-                );
+                // Show AI generation loading → real API call → MockupDialog
+                await _showAIGenerationLoading(context, controller);
               },
               child: Container(
                 padding: EdgeInsets.all(8.w),
@@ -445,4 +429,65 @@ class _ImagePreviewContent extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Helper function to show AI generation loading animation,
+/// call the real API inside onGenerate, then show MockupDialog with results.
+Future<void> _showAIGenerationLoading(
+  BuildContext context,
+  UploadImageController controller,
+) async {
+  // ─── Resolve bag_type from CreateController selection ─────────────────────
+  // CreateController holds which bag type + product row the user selected.
+  // BagTypeMapper converts that combination to the API bag_type string.
+  String bagType;
+  try {
+    final createController = Get.find<CreateController>();
+    bagType = createController.resolvedBagType;
+  } catch (_) {
+    // CreateController not in scope — use default
+    bagType = 'gusset_fullwrap';
+  }
+  print('🎒 Using bag_type: $bagType');
+  var generationSucceeded = false;
+
+  // Show loading animation as a full-screen dialog
+  await showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext dialogContext) {
+      return AIGenerationLoadingWidget(
+        onGenerate: () async {
+          // ─── REAL API CALL with resolved bag_type ────────────────────
+          generationSucceeded = await controller.generateBagDesign(
+            bagType: bagType,
+          );
+        },
+        onClose: () {
+          if (dialogContext.mounted) {
+            Navigator.of(dialogContext).pop();
+          }
+        },
+      );
+    },
+  );
+
+  // ─── After loading dialog is fully dismissed ──────────────────────────────
+  if (!context.mounted) return;
+  if (!generationSucceeded || !controller.hasGeneratedImages) {
+    return;
+  }
+
+  // Show MockupDialog with generated network images.
+  await MockupDialog.show(
+    context,
+    images: controller.mockupImages,
+    isNetworkImage: true,
+    onSaveImages: () async {
+      return await controller.saveGeneratedLogoToYourDesign();
+    },
+    onAddToCollections: () async {
+      return await controller.addMockupToCollections();
+    },
+  );
 }

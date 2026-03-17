@@ -4,6 +4,208 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../utils/app_colors.dart';
 import '../utils/app_fonts.dart';
 
+/// CircleFadeAnimation - Reusable ripple/circle fade animation on tap
+/// OOP: Single responsibility — only handles the press animation effect
+class CircleFadeAnimation extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onPressed;
+  final BorderRadius? borderRadius;
+  final Color? splashColor;
+
+  const CircleFadeAnimation({
+    super.key,
+    required this.child,
+    this.onPressed,
+    this.borderRadius,
+    this.splashColor,
+  });
+
+  @override
+  State<CircleFadeAnimation> createState() => _CircleFadeAnimationState();
+}
+
+class _CircleFadeAnimationState extends State<CircleFadeAnimation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _opacityAnimation;
+
+  Offset _tapPosition = Offset.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.35, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    setState(() {
+      _tapPosition = box.globalToLocal(details.globalPosition);
+    });
+    _controller.forward(from: 0.0);
+  }
+
+  void _onTap() {
+    if (widget.onPressed != null) {
+      widget.onPressed!();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTap: _onTap,
+      child: ClipRRect(
+        borderRadius: widget.borderRadius ?? BorderRadius.circular(8.r),
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return CustomPaint(
+              foregroundPainter: _RipplePainter(
+                center: _tapPosition,
+                progress: _scaleAnimation.value,
+                opacity: _opacityAnimation.value,
+                color: widget.splashColor ?? Colors.white,
+              ),
+              child: child,
+            );
+          },
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+/// _RipplePainter - Draws the expanding circle fade on canvas
+/// OOP: Encapsulates all drawing logic in one place
+class _RipplePainter extends CustomPainter {
+  final Offset center;
+  final double progress;
+  final double opacity;
+  final Color color;
+
+  const _RipplePainter({
+    required this.center,
+    required this.progress,
+    required this.opacity,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (progress == 0.0) return;
+
+    // Max radius = diagonal of the widget so ripple covers full area
+    final maxRadius =
+        (Offset.zero - Offset(size.width, size.height)).distance;
+    final radius = maxRadius * progress;
+
+    final paint = Paint()
+      ..color = color.withValues(alpha: opacity)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(_RipplePainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.opacity != opacity;
+  }
+}
+
+/// CustomCloseButton - Reusable X/close button with circle fade animation
+/// OOP: Self-contained, composable, reusable across all dialogs and screens
+class CustomCloseButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final Color? backgroundColor;
+  final Color? iconColor;
+  final double? size;
+  final double? iconSize;
+  final Color? splashColor;
+
+  const CustomCloseButton({
+    super.key,
+    required this.onPressed,
+    this.backgroundColor,
+    this.iconColor,
+    this.size,
+    this.iconSize,
+    this.splashColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double buttonSize = size ?? 28;
+
+    return CircleFadeAnimation(
+      onPressed: onPressed,
+      borderRadius: BorderRadius.circular(buttonSize / 2),
+      splashColor: splashColor ?? Colors.white,
+      child: _CloseButtonContainer(
+        size: buttonSize,
+        backgroundColor: backgroundColor,
+        iconColor: iconColor,
+        iconSize: iconSize,
+      ),
+    );
+  }
+}
+
+/// Private container for close button visuals
+/// OOP: Separates visual from gesture logic
+class _CloseButtonContainer extends StatelessWidget {
+  final double size;
+  final Color? backgroundColor;
+  final Color? iconColor;
+  final double? iconSize;
+
+  const _CloseButtonContainer({
+    required this.size,
+    this.backgroundColor,
+    this.iconColor,
+    this.iconSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.red,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Icon(
+          Icons.close,
+          size: iconSize ?? 3.sp,
+          color: iconColor ?? Colors.white,
+        ),
+      ),
+    );
+  }
+}
+
 /// CustomButton - A reusable button widget following OOP principles
 /// Encapsulates button styling, behavior, and configuration
 class CustomButton extends StatelessWidget {
@@ -154,14 +356,20 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // When height is explicit, use zero padding so SizedBox controls the height
+    final effectivePadding = height != null
+        ? EdgeInsets.symmetric(horizontal: 24)
+        : padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 14);
+
     return _ButtonWrapper(
       width: width,
       height: height,
       onPressed: _handlePress,
+      borderRadius: borderRadius ?? 8,
       child: _ButtonContent(
         backgroundColor: _getBackgroundColor(),
         borderRadius: borderRadius ?? 8,
-        padding: padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        padding: effectivePadding,
         boxShadow: boxShadow,
         child: _ButtonRow(
           prefixIcon: prefixIcon,
@@ -203,11 +411,12 @@ class CustomButton extends StatelessWidget {
 }
 
 /// Private wrapper widget for button container
-/// Encapsulates width, height, and gesture handling
+/// Encapsulates width, height, and gesture handling with circle fade animation
 class _ButtonWrapper extends StatelessWidget {
   final double? width;
   final double? height;
   final VoidCallback? onPressed;
+  final double? borderRadius;
   final Widget child;
 
   const _ButtonWrapper({
@@ -215,14 +424,16 @@ class _ButtonWrapper extends StatelessWidget {
     required this.height,
     required this.onPressed,
     required this.child,
+    this.borderRadius,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: width?.w ?? 350.w,
+    return CircleFadeAnimation(
+      onPressed: onPressed,
+      borderRadius: BorderRadius.circular((borderRadius ?? 8).r),
+      child: SizedBox(
+        width: width != null ? width!.w : double.infinity,
         height: height?.h,
         child: child,
       ),
@@ -250,7 +461,9 @@ class _ButtonContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       padding: padding,
+      alignment: Alignment.center,
       decoration: ShapeDecoration(
         color: backgroundColor,
         shape: RoundedRectangleBorder(
@@ -341,7 +554,7 @@ class _ButtonLabel extends StatelessWidget {
         color: textColor,
       ).copyWith(
         fontWeight: fontWeight,
-        height: 1.44,
+        height: 1.2,
       ),
     );
   }

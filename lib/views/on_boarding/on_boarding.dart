@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../services/auth_state_service.dart';
+import '../../services/token_storage_service.dart';
 import '../../widgets/custom_assets.dart';
 import '../../widgets/custom_button.dart';
 import '../../utils/app_fonts.dart';
 import '../../routes/app_path.dart';
 
 /// OnboardingScreen - Main onboarding flow with 3 pages
-/// Follows OOP principles with composition and encapsulation
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -26,14 +27,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  /// Handles page change
   void _onPageChanged(int page) {
     setState(() {
       _currentPage = page;
     });
   }
 
-  /// Navigates to next page or completes onboarding
   void _handleNext() {
     if (_currentPage < 2) {
       _pageController.nextPage(
@@ -41,7 +40,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      // Navigate to login screen after onboarding
+      TokenStorageService.instance.setOnboardingSeen();
+      AuthStateService.instance.reset();
       if (mounted) {
         context.go(AppPath.login);
       }
@@ -51,6 +51,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // extendBody ensures content goes behind gesture bar area
+      extendBody: true,
       body: _OnboardingContent(
         pageController: _pageController,
         currentPage: _currentPage,
@@ -62,7 +64,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 /// Private widget for onboarding content
-/// Encapsulates the page view and navigation
 class _OnboardingContent extends StatelessWidget {
   final PageController pageController;
   final int currentPage;
@@ -78,40 +79,53 @@ class _OnboardingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get bottom inset (gesture bar / nav bar height)
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Container(
-      width: 402.w,
-      height: 874.h,
+      // ✅ Use full screen size instead of fixed 402.w / 874.h
+      width: double.infinity,
+      height: double.infinity,
       clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFFCFF),
+      decoration: const BoxDecoration(
+        color: Color(0xFFEFFCFF),
       ),
       child: Stack(
         children: [
-          // Page View
+          // Page View — fills entire screen
           PageView(
             controller: pageController,
             onPageChanged: onPageChanged,
-            children: [
+            children: const [
               _OnboardingPage1(),
               _OnboardingPage2(),
               _OnboardingPage3(),
             ],
           ),
 
-          // Page Indicators
+          // ✅ Bottom controls: indicators + button above gesture bar
           Positioned(
-            left: 178.w,
-            top: 739.h,
-            child: _PageIndicators(currentPage: currentPage),
-          ),
+            left: 0,
+            right: 0,
+            // Push above gesture bar dynamically
+            bottom: bottomInset + 20.h,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Page Indicators
+                _PageIndicators(currentPage: currentPage),
 
-          // Next Button
-          Positioned(
-            left: 26.w,
-            top: 773.h,
-            child: CustomButton.primary(
-              label: 'Next',
-              onPressed: onNext,
+                SizedBox(height: 16.h),
+
+                // Next Button
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 26.w),
+                  child: CustomButton.primary(
+                    label: 'Next',
+                    onPressed: onNext,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -126,6 +140,8 @@ class _OnboardingPage1 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Stack(
       children: [
         // Background image
@@ -136,27 +152,17 @@ class _OnboardingPage1 extends StatelessWidget {
           ),
         ),
 
-        // Text content
+        // ✅ Text position relative to screen height (not fixed pixel)
         Positioned(
           left: 26.w,
-          top: 319.h,
-          child: _OnboardingText(
+          top: screenHeight * 0.365,
+          child: const _OnboardingText(
             title: 'WELCOME TO SOESTERN!',
             description: 'Create, Save and print custom labels\nwith ease.',
           ),
         ),
-
-        // Decorative images (placeholders from your design)
-        ..._buildDecorativeImages1(),
       ],
     );
-  }
-
-  List<Widget> _buildDecorativeImages1() {
-    return [
-      // You can add decorative images here if needed
-      // For now, the background image handles the visuals
-    ];
   }
 }
 
@@ -166,9 +172,10 @@ class _OnboardingPage2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Stack(
       children: [
-        // Background image
         Positioned.fill(
           child: Image.asset(
             CustomAssets.onBoardingSecond,
@@ -176,13 +183,14 @@ class _OnboardingPage2 extends StatelessWidget {
           ),
         ),
 
-        // Text content
+        // ✅ Relative position
         Positioned(
           left: 26.w,
-          top: 493.h,
-          child: _OnboardingText(
+          top: screenHeight * 0.565,
+          child: const _OnboardingText(
             title: 'DESIGN YOUR LABEL OR FULLY PRINTED BAG INSTANTLY',
-            description: 'Upload your logo or generate a design with AI — customize text, colors, and layout in just a few taps.',
+            description:
+                'Upload your logo or generate a design with AI — customize text, colors, and layout in just a few taps.',
           ),
         ),
       ],
@@ -196,9 +204,10 @@ class _OnboardingPage3 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Stack(
       children: [
-        // Background image
         Positioned.fill(
           child: Image.asset(
             CustomAssets.onBoardingThird,
@@ -206,13 +215,14 @@ class _OnboardingPage3 extends StatelessWidget {
           ),
         ),
 
-        // Text content
+        // ✅ Relative position
         Positioned(
           left: 26.w,
-          top: 493.h,
-          child: _OnboardingText(
+          top: screenHeight * 0.565,
+          child: const _OnboardingText(
             title: 'PREVIEW.  SAVE.  DONE.',
-            description: 'See your uploaded labels or custom printed mock up within seconds!',
+            description:
+                'See your uploaded labels or custom printed mock up within seconds!',
           ),
         ),
       ],
@@ -221,7 +231,6 @@ class _OnboardingPage3 extends StatelessWidget {
 }
 
 /// Reusable text widget for onboarding pages
-/// Encapsulates title and description styling
 class _OnboardingText extends StatelessWidget {
   final String title;
   final String description;
@@ -244,9 +253,7 @@ class _OnboardingText extends StatelessWidget {
             style: AppFonts.poppinsBold(
               fontSize: 32.sp,
               color: const Color(0xFF0F0F0F),
-            ).copyWith(
-              height: 1.25,
-            ),
+            ).copyWith(height: 1.25),
           ),
           SizedBox(height: 16.h),
           Text(
@@ -254,9 +261,7 @@ class _OnboardingText extends StatelessWidget {
             style: AppFonts.poppinsMedium(
               fontSize: 16.sp,
               color: Colors.black,
-            ).copyWith(
-              height: 1.38,
-            ),
+            ).copyWith(height: 1.38),
           ),
         ],
       ),
@@ -265,7 +270,6 @@ class _OnboardingText extends StatelessWidget {
 }
 
 /// Page indicators widget
-/// Shows which page is currently active
 class _PageIndicators extends StatelessWidget {
   final int currentPage;
 
@@ -274,6 +278,7 @@ class _PageIndicators extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: List.generate(3, (index) {
         return Padding(
@@ -286,7 +291,6 @@ class _PageIndicators extends StatelessWidget {
 }
 
 /// Single page indicator
-/// Encapsulates indicator styling
 class _PageIndicator extends StatelessWidget {
   final bool isActive;
 
@@ -304,4 +308,3 @@ class _PageIndicator extends StatelessWidget {
     );
   }
 }
-

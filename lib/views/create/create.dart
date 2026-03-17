@@ -113,7 +113,7 @@ class _BagTypeOptions extends StatelessWidget {
         // Full Graphic Bag
         Obx(() => _BagTypeCard(
           image: CustomAssets.createYourFullGraphicsBag,
-          title: 'Create full\ngraphic bag',
+          title: 'Create Full Graphic Bag',
           isSelected: controller.isFullGraphicSelected,
           onTap: () => controller.createFullGraphicBag(),
         )),
@@ -123,7 +123,7 @@ class _BagTypeOptions extends StatelessWidget {
         // Label Bag
         Obx(() => _BagTypeCard(
           image: CustomAssets.createLabelBag,
-          title: 'Create\nlabel bag',
+          title: 'Create Label Bag',
           isSelected: controller.isLabelSelected,
           onTap: () => controller.createLabelBag(),
         )),
@@ -169,7 +169,7 @@ class _BagTypeCard extends StatelessWidget {
                   // Bag Image
                   Container(
                     width: 163.w,
-                    height: 364.h,
+                    height: 300.h,
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12.r),
@@ -199,6 +199,15 @@ class _BagTypeCard extends StatelessWidget {
                     child: Image.asset(
                       image,
                       fit: BoxFit.contain,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: AppFonts.interSemiBold(
+                      fontSize: 24.sp,
+                      color: const Color(0xFF0F0F0F),
                     ),
                   ),
                 ],

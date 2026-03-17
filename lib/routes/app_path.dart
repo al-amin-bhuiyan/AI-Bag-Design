@@ -7,12 +7,14 @@ class AppPath {
 
   // Route path constants
   static const String splash = '/';
+  static const String authGuard = '/';   // Initial route — resolves auth state
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String signUp = '/signup';
   static const String forgotPassword = '/forgot-password';
   static const String verificationCode = '/verification-code';
   static const String changePassword = '/change-password';
+  static const String setNewPassword = '/set-new-password';
   static const String resetSuccess = '/reset-success';
   static const String create = '/create';
   static const String collection = '/collection';
@@ -27,6 +29,7 @@ class AppPath {
   static const String contactSupport = '/contact-support';
   static const String privacyPolicy = '/privacy-policy';
   static const String termsAndConditions = '/terms-and-conditions';
+  static const String verificationCodefromsignup = '/verification-Code-from-signup';
   
   // Add more route paths here as the application grows
 
@@ -53,6 +56,7 @@ class AppPath {
         contactSupport,
         privacyPolicy,
         termsAndConditions,
+    verificationCodefromsignup,
         // Add new routes to this list as they are created
       ];
 

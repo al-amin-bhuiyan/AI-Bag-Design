@@ -247,7 +247,7 @@ class _TermsCheckbox extends StatelessWidget {
           SizedBox(width: 8.w),
           Expanded(
             child: GestureDetector(
-              onTap: controller.showTermsAndPrivacy,
+              onTap: () => controller.showTermsAndPrivacy(context),
               child: Text(
                 'Agree with terms and privacy',
                 style: AppFonts.poppinsSemiBold(

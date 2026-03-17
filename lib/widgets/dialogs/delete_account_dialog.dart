@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../utils/app_fonts.dart';
+import '../custom_button.dart';
 
 /// Delete Account Confirmation Dialog
 /// Follows OOP principles with clear separation of concerns
@@ -55,9 +56,11 @@ class DeleteAccountDialog extends StatelessWidget {
             
             SizedBox(height: 32.h),
             
-            // Delete Button
-            GestureDetector(
-              onTap: onConfirm,
+            // Delete Button with ripple animation
+            CircleFadeAnimation(
+              onPressed: onConfirm,
+              borderRadius: BorderRadius.circular(8.r),
+              splashColor: Colors.white,
               child: Container(
                 width: double.infinity,
                 height: 50.h,

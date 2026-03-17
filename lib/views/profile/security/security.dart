@@ -5,83 +5,72 @@ import 'package:go_router/go_router.dart';
 import '../../../controllers/security_controller/security_controller.dart';
 import '../../../utils/app_fonts.dart';
 import '../../../widgets/custom_back_button.dart';
-import '../../../widgets/dialogs/delete_account_dialog.dart';
 
+/// SecurityScreen - Change password and delete account options
 /// Follows OOP principles with widget composition and separation of concerns
 class SecurityScreen extends StatelessWidget {
   const SecurityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Initialize controller
-    final controller = Get.put(SecurityController());
+    // Get.find() — controller is registered in Binding via lazyPut(fenix: true)
+    final controller = Get.find<SecurityController>();
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // App Bar
-            _AppBar(),
+            Column(
+              children: [
+                // App Bar
+                _AppBar(),
 
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 26.w),
-                child: Column(
-                  children: [
-                    SizedBox(height: 12.h),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(horizontal: 26.w),
+                    child: Column(
+                      children: [
+                        SizedBox(height: 12.h),
 
-                    // Change Password Option (First)
-                    _SecurityOption(
-                      title: 'Change Password',
-                      onTap: () => controller.navigateToChangePassword(context),
-                      isDestructive: false,
+                        // Change Password
+                        _SecurityOption(
+                          title: 'Change Password',
+                          onTap: () => controller.navigateToChangePassword(context),
+                          isDestructive: false,
+                        ),
+
+                        SizedBox(height: 16.h),
+
+                        // Delete Account
+                        _SecurityOption(
+                          title: 'Delete Account',
+                          onTap: () => controller.showDeleteAccountDialog(context),
+                          isDestructive: true,
+                        ),
+
+                        SizedBox(height: 24.h),
+                      ],
                     ),
-
-                 //   SizedBox(height: 16.h),
-
-                    // Change Password Option (Second - duplicate in design)
-                    // _SecurityOption(
-                    //   title: 'Change Password',
-                    //   onTap: () => controller.navigateToChangePassword(context),
-                    //   isDestructive: false,
-                    // ),
-
-                    SizedBox(height: 16.h),
-
-                    // Delete Account Option
-                    _SecurityOption(
-                      title: 'Delete Account',
-                      onTap: () => _showDeleteAccountDialog(context, controller),
-                      isDestructive: true,
-                    ),
-
-                    SizedBox(height: 24.h),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
+
+            // Full-screen loading overlay while deleting
+            Obx(() => controller.isDeletingAccount.value
+                ? Container(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFEE6C61),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink()),
           ],
         ),
-      ),
-    );
-  }
-
-  /// Shows delete account confirmation dialog
-  void _showDeleteAccountDialog(BuildContext context, SecurityController controller) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => DeleteAccountDialog(
-        onConfirm: () async {
-          Navigator.of(context).pop();
-          await controller.deleteAccount();
-          // Navigate to login after deletion
-          if (context.mounted) {
-            context.go('/login');
-          }
-        },
       ),
     );
   }

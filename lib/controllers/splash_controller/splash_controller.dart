@@ -1,19 +1,30 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import '../../routes/app_path.dart';
+import '../../services/auth_service.dart';
+import '../../services/token_storage_service.dart';
 import '../../utils/app_constants.dart';
 
-/// SplashController manages the splash screen logic and navigation
-/// Follows OOP principles with encapsulation and single responsibility
+/// SplashController - Decides where to navigate after splash
+///
+/// Logic:
+///   1. First time ever           → Onboarding → Login
+///   2. Has token & token valid   → Create (home)
+///   3. Has token & expired       → Try refresh → Create (home) or Login
+///   4. No token                  → Login (seen onboarding before)
+///
+/// Follows 100% OOP: single responsibility, encapsulation, composition
 class SplashController extends GetxController {
-  // Private observable for navigation state
+  // ─── Dependencies ─────────────────────────────────────────────────────────
+  final TokenStorageService _tokenStorage = TokenStorageService.instance;
+  final AuthService _authService = AuthService.instance;
+
+  // ─── State ────────────────────────────────────────────────────────────────
   final RxBool _isNavigating = false.obs;
-
-  // Configuration constants from centralized constants file
-  static const Duration _splashDuration = SplashConfig.splashDuration;
-
-  // Getters
   bool get isNavigating => _isNavigating.value;
+
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   @override
   void onInit() {
@@ -21,35 +32,83 @@ class SplashController extends GetxController {
     _initializeSplash();
   }
 
-  /// Initializes splash screen and starts navigation timer
-  void _initializeSplash() {
-    // Initialize any app-wide settings here if needed
-    _scheduleNavigation();
-  }
+  // ─── Private Methods ──────────────────────────────────────────────────────
 
-  /// Schedules navigation to the next screen after splash duration
-  Future<void> _scheduleNavigation() async {
+  /// Waits for splash duration then determines navigation destination
+  Future<void> _initializeSplash() async {
     if (_isNavigating.value) return;
-
     _isNavigating.value = true;
-
-    // Wait for the configured splash duration
-    await Future.delayed(_splashDuration);
-
-    // Navigate to onboarding screen
-    _navigateToNextScreen();
+    await Future.delayed(SplashConfig.splashDuration);
+    await _determineNavigation();
   }
 
-  /// Navigates to the onboarding screen
-  void _navigateToNextScreen() {
-    if (Get.context != null && Get.context!.mounted) {
-      Get.context!.go(AppPath.onboarding);
+  /// Always gets a fresh context reference after async gaps
+  void _navigate(String path) {
+    final ctx = Get.context;
+    if (ctx != null && ctx.mounted) {
+      ctx.go(path);
     }
   }
 
-  @override
-  void onClose() {
-    // Clean up resources if needed
-    super.onClose();
+  /// Determines where to navigate based on auth state
+  Future<void> _determineNavigation() async {
+    try {
+      // ── Step 1: First-time user? ─────────────────────────────────────────
+      final bool seenOnboarding = await _tokenStorage.hasSeenOnboarding();
+      if (!seenOnboarding) {
+        debugPrint('🆕 First-time user → Onboarding');
+        _navigate(AppPath.onboarding);
+        return;
+      }
+
+      // ── Step 2: Any access token saved? ──────────────────────────────────
+      final String? accessToken = await _tokenStorage.getAccessToken();
+      final String? refreshToken = await _tokenStorage.getRefreshToken();
+
+      if (accessToken == null || accessToken.isEmpty) {
+        debugPrint('🔓 No token → Login');
+        _navigate(AppPath.login);
+        return;
+      }
+
+      // ── Step 3: Verify access token ──────────────────────────────────────
+      final verifyResponse = await _authService.verifyToken(token: accessToken);
+
+      if (verifyResponse.success) {
+        debugPrint('✅ Token valid → Create (home)');
+        _navigate(AppPath.create);
+        return;
+      }
+
+      // ── Step 4: Try refresh token ─────────────────────────────────────────
+      debugPrint('🔄 Token expired — trying refresh...');
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        final refreshResponse =
+            await _authService.refreshToken(refreshToken: refreshToken);
+
+        if (refreshResponse.success && refreshResponse.data != null) {
+          final newAccessToken =
+              refreshResponse.data!['access'] as String? ?? '';
+
+          if (newAccessToken.isNotEmpty) {
+            await _tokenStorage.saveTokens(
+              accessToken: newAccessToken,
+              refreshToken: refreshToken,
+            );
+            debugPrint('✅ Token refreshed → Create (home)');
+            _navigate(AppPath.create);
+            return;
+          }
+        }
+      }
+
+      // ── Step 5: All tokens invalid — clear and go to login ────────────────
+      debugPrint('🔓 Tokens expired → Login');
+      await _tokenStorage.clearAll();
+      _navigate(AppPath.login);
+    } catch (e) {
+      debugPrint('❌ Splash auth check error: $e');
+      _navigate(AppPath.login);
+    }
   }
 }

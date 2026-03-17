@@ -217,6 +217,7 @@ class _ProfileAppBar extends StatelessWidget {
 }
 
 /// Profile Card Widget
+/// Displays user name, email, and profile image fetched from API
 class _ProfileCard extends StatelessWidget {
   final ProfileController controller;
 
@@ -224,83 +225,165 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() => Container(
-      width: 350.w,
-      height: 90.h,
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            width: 1,
-            color: const Color(0xFFF2F4F6),
+    // Read directly from session RxString observables inside Obx
+    // so GetX correctly tracks each reactive value
+    return Obx(() {
+      final imageUrl = controller.session.imageUrl.value;
+      final name     = controller.session.name.value;
+      final email    = controller.session.email.value;
+      final loading  = controller.isLoading.value;
+
+      return Container(
+        width: 350.w,
+        height: 90.h,
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        decoration: ShapeDecoration(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(width: 1, color: Color(0xFFF2F4F6)),
+            borderRadius: BorderRadius.circular(16.r),
           ),
-          borderRadius: BorderRadius.circular(16.r),
+          shadows: const [
+            BoxShadow(
+              color: Color(0x19000000),
+              blurRadius: 2,
+              offset: Offset(1, 1),
+              spreadRadius: -0.1,
+            ),
+          ],
         ),
-        shadows: [
-          BoxShadow(
-            color: const Color(0x19000000),
-            blurRadius: 2,
-            offset: const Offset(1, 1),
-            spreadRadius: -0.1,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Profile Image
-          Container(
-            width: 70.w,
-            height: 70.h,
-            clipBehavior: Clip.antiAlias,
-            decoration: ShapeDecoration(
-              shape: RoundedRectangleBorder(
-                side: BorderSide(
-                  width: 1,
-                  color: const Color(0xFFF2F4F6),
-                ),
-                borderRadius: BorderRadius.circular(33554400.r),
-              ),
+        child: Row(
+          children: [
+            // ── Profile Image ──────────────────────────────────────────────
+            _ProfileAvatar(imageUrl: imageUrl),
+
+            SizedBox(width: 12.w),
+
+            // ── User Info ──────────────────────────────────────────────────
+            Expanded(
+              child: loading && name.isEmpty
+                  ? _ProfileInfoShimmer()
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name.isNotEmpty ? name : '—',
+                          style: AppFonts.poppinsSemiBold(
+                            fontSize: 18.sp,
+                            color: const Color(0xFF101727),
+                          ).copyWith(height: 1.56),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          email.isNotEmpty ? email : '—',
+                          style: AppFonts.interRegular(
+                            fontSize: 14.sp,
+                            color: const Color(0xFF697282),
+                          ).copyWith(height: 1.43),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
             ),
-            child: controller.userProfileImage.value.isNotEmpty
-                ? Image.network(
-                    controller.userProfileImage.value,
-                    fit: BoxFit.cover,
-                  )
-                : Image.asset(
-                    CustomAssets.personimage,
-                    fit: BoxFit.cover,
+
+            // ── Refresh indicator ──────────────────────────────────────────
+            if (loading)
+              Padding(
+                padding: EdgeInsets.only(left: 8.w),
+                child: SizedBox(
+                  width: 16.w,
+                  height: 16.h,
+                  child: const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF1F7CD5),
                   ),
-          ),
-          
-          SizedBox(width: 12.w),
-          
-          // User Info
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  controller.userName.value,
-                  style: AppFonts.poppinsSemiBold(
-                    fontSize: 18.sp,
-                    color: const Color(0xFF101727),
-                  ).copyWith(height: 1.56),
                 ),
-                Text(
-                  controller.userEmail.value,
-                  style: AppFonts.interRegular(
-                    fontSize: 14.sp,
-                    color: const Color(0xFF697282),
-                  ).copyWith(height: 1.43),
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+          ],
+        ),
+      );
+    });
+  }
+}
+
+/// Profile avatar widget — handles network image, loading, and error fallback
+class _ProfileAvatar extends StatelessWidget {
+  final String imageUrl;
+  const _ProfileAvatar({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 70.w,
+      height: 70.h,
+      clipBehavior: Clip.antiAlias,
+      decoration: ShapeDecoration(
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 1, color: Color(0xFFF2F4F6)),
+          borderRadius: BorderRadius.circular(35.r),
+        ),
       ),
-    ));
+      child: imageUrl.isNotEmpty
+          ? Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              // Show shimmer while loading
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  color: const Color(0xFFF2F4F6),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF1F7CD5),
+                    ),
+                  ),
+                );
+              },
+              // Fallback to asset on error
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset(
+                  CustomAssets.personimage,
+                  fit: BoxFit.cover,
+                );
+              },
+            )
+          : Image.asset(
+              CustomAssets.personimage,
+              fit: BoxFit.cover,
+            ),
+    );
+  }
+}
+
+/// Shimmer placeholder for name/email while loading
+class _ProfileInfoShimmer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 120.w,
+          height: 16.h,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F4F6),
+            borderRadius: BorderRadius.circular(4.r),
+          ),
+        ),
+        SizedBox(height: 6.h),
+        Container(
+          width: 160.w,
+          height: 12.h,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F4F6),
+            borderRadius: BorderRadius.circular(4.r),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -531,8 +614,8 @@ class _LogoutButton extends StatelessWidget {
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.5),
-      builder: (BuildContext context) => LogoutDialog(
-        onLogoutConfirm: () => controller.confirmLogout(),
+      builder: (BuildContext dialogContext) => LogoutDialog(
+        onLogoutConfirm: () => controller.confirmLogout(context),
       ),
     );
   }

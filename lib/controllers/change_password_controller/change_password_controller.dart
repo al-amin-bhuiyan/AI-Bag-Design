@@ -1,182 +1,182 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import '../../models/api_response_model.dart';
+import '../../models/change_password_model.dart';
+import '../../services/auth_service.dart';
+import '../../services/token_storage_service.dart';
 
-/// ChangePasswordController manages change password screen logic and state
-/// Follows OOP principles with encapsulation and single responsibility
+/// ChangePasswordController - Manages change password screen logic and state
+/// Calls real POST /accounts/user/change-password/ API with Bearer token
+/// Shows Fluttertoast for every validation error and API response
+/// Follows 100% OOP: encapsulation, single responsibility, composition
 class ChangePasswordController extends GetxController {
-  // Form key
+  // ─── Dependencies (Composition) ───────────────────────────────────────────
+  final AuthService _authService = AuthService.instance;
+  final TokenStorageService _tokenStorage = TokenStorageService.instance;
+
+  // ─── Form ─────────────────────────────────────────────────────────────────
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  
-  // Text editing controllers
   final TextEditingController currentPasswordController = TextEditingController();
-  final TextEditingController newPasswordController = TextEditingController();
+  final TextEditingController newPasswordController     = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
 
-  // Observable state
-  final RxBool isLoading = false.obs;
-  final RxBool currentPasswordObscure = true.obs;
-  final RxBool newPasswordObscure = true.obs;
-  final RxBool confirmPasswordObscure = true.obs;
+  // ─── Observable State ─────────────────────────────────────────────────────
+  final RxBool isLoading               = false.obs;
+  final RxBool currentPasswordObscure  = true.obs;
+  final RxBool newPasswordObscure      = true.obs;
+  final RxBool confirmPasswordObscure  = true.obs;
 
-  // Getters
-  String get currentPassword => currentPasswordController.text;
-  String get newPassword => newPasswordController.text;
-  String get confirmPassword => confirmPasswordController.text;
+  // ─── Getters ──────────────────────────────────────────────────────────────
+  String get currentPassword => currentPasswordController.text.trim();
+  String get newPassword     => newPasswordController.text.trim();
+  String get confirmPassword => confirmPasswordController.text.trim();
 
-  @override
-  void onInit() {
-    super.onInit();
-  }
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   @override
   void onClose() {
-    _disposeControllers();
+    currentPasswordController.dispose();
+    newPasswordController.dispose();
+    confirmPasswordController.dispose();
     super.onClose();
   }
 
-  /// Toggles current password visibility
-  void toggleCurrentPasswordVisibility() {
-    currentPasswordObscure.value = !currentPasswordObscure.value;
-  }
+  // ─── Visibility Toggles ───────────────────────────────────────────────────
 
-  /// Toggles new password visibility
-  void toggleNewPasswordVisibility() {
-    newPasswordObscure.value = !newPasswordObscure.value;
-  }
+  void toggleCurrentPasswordVisibility() =>
+      currentPasswordObscure.value = !currentPasswordObscure.value;
 
-  /// Toggles confirm password visibility
-  void toggleConfirmPasswordVisibility() {
-    confirmPasswordObscure.value = !confirmPasswordObscure.value;
-  }
+  void toggleNewPasswordVisibility() =>
+      newPasswordObscure.value = !newPasswordObscure.value;
 
-  /// Validates new password
-  String? validateNewPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'New password is required';
-    }
+  void toggleConfirmPasswordVisibility() =>
+      confirmPasswordObscure.value = !confirmPasswordObscure.value;
 
-    if (value.length < 8) {
-      return 'Password must be at least 8 characters';
-    }
+  // ─── Validation ───────────────────────────────────────────────────────────
 
-    // Check for at least one uppercase letter
-    if (!value.contains(RegExp(r'[A-Z]'))) {
-      return 'Password must contain at least one uppercase letter';
-    }
-
-    // Check for at least one lowercase letter
-    if (!value.contains(RegExp(r'[a-z]'))) {
-      return 'Password must contain at least one lowercase letter';
-    }
-
-    // Check for at least one number
-    if (!value.contains(RegExp(r'[0-9]'))) {
-      return 'Password must contain at least one number';
-    }
-
-    return null;
-  }
-
-  /// Validates confirm password
-  String? validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Confirm password is required';
-    }
-
-    if (value != newPassword) {
-      return 'Passwords do not match';
-    }
-
-    return null;
-  }
-
-  /// Validates all fields
-  bool validateFields() {
+  /// Validates all fields — shows individual toast for each failure
+  bool _validateFields() {
+    // Current password
     if (currentPassword.isEmpty) {
-      _showMessage('Current password is required');
+      _showError('Current password is required');
       return false;
     }
 
-    final newPasswordError = validateNewPassword(newPassword);
-    final confirmPasswordError = validateConfirmPassword(confirmPassword);
-
-    if (newPasswordError != null) {
-      _showMessage(newPasswordError);
+    // New password
+    if (newPassword.isEmpty) {
+      _showError('New password is required');
+      return false;
+    }
+    if (newPassword.length < 8) {
+      _showError('New password must be at least 8 characters');
+      return false;
+    }
+    if (!newPassword.contains(RegExp(r'[A-Z]'))) {
+      _showError('New password must contain at least one uppercase letter');
+      return false;
+    }
+    if (!newPassword.contains(RegExp(r'[a-z]'))) {
+      _showError('New password must contain at least one lowercase letter');
+      return false;
+    }
+    if (!newPassword.contains(RegExp(r'[0-9]'))) {
+      _showError('New password must contain at least one number');
+      return false;
+    }
+    if (newPassword == currentPassword) {
+      _showError('New password must be different from current password');
       return false;
     }
 
-    if (confirmPasswordError != null) {
-      _showMessage(confirmPasswordError);
+    // Confirm password
+    if (confirmPassword.isEmpty) {
+      _showError('Please confirm your new password');
+      return false;
+    }
+    if (confirmPassword != newPassword) {
+      _showError('Passwords do not match');
       return false;
     }
 
     return true;
   }
 
-  /// Handles change password action
-  Future<void> changePassword(BuildContext context) async {
-    print('🔵 changePassword called');
-    
-    if (!validateFields()) {
-      print('❌ Validation failed');
-      return;
-    }
+  // ─── Public Methods ───────────────────────────────────────────────────────
 
-    print('✅ Validation passed');
+  /// Handles change password — validates then calls real API
+  Future<void> changePassword() async {
+    if (!_validateFields()) return;
+
     isLoading.value = true;
-
     try {
-      print('⏳ Calling API...');
-      // Simulate API call
-      await _changePasswordAPI(currentPassword, newPassword);
-      print('✅ API call successful');
+      final String? accessToken = await _tokenStorage.getAccessToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        _showError('Session expired. Please log in again.');
+        return;
+      }
 
-      if (context.mounted) {
-        print('🔵 Context is mounted, showing success and navigating back');
-        _showMessage('Password changed successfully!');
-        // Navigate back to security/profile screen
-        context.pop();
-        print('✅ Navigation back successful');
+      debugPrint('📤 Changing password...');
+
+      final ChangePasswordRequestModel request = ChangePasswordRequestModel(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+        confirmNewPassword: confirmPassword,
+      );
+
+      final ApiResponse<ChangePasswordResponseModel> response =
+          await _authService.changePassword(
+        accessToken: accessToken,
+        request: request,
+      );
+
+      if (response.success && response.data != null) {
+        final String msg = response.data!.message;
+        debugPrint('✅ $msg');
+
+        _showSuccess(msg);
+
+        // Clear fields after success
+        currentPasswordController.clear();
+        newPasswordController.clear();
+        confirmPasswordController.clear();
       } else {
-        print('❌ Context not mounted!');
+        _showError(response.errorMessage ?? 'Failed to change password. Please try again.');
       }
     } catch (e) {
-      print('❌ Error: $e');
-      _showMessage('Failed to change password. Please try again.');
+      debugPrint('❌ Change password error: $e');
+      _showError('Something went wrong. Please try again.');
     } finally {
       isLoading.value = false;
-      print('🔵 Loading state set to false');
     }
   }
 
-  /// API call to change password (placeholder)
-  Future<void> _changePasswordAPI(String currentPass, String newPass) async {
-    // TODO: Implement actual API call
-    await Future.delayed(const Duration(seconds: 2));
+  void navigateBack(BuildContext context) {
+    if (context.mounted) context.pop();
   }
 
-  /// Shows a message to the user
-  void _showMessage(String message) {
-    Get.snackbar(
-      'Info',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 3),
+  // ─── Toast Helpers ────────────────────────────────────────────────────────
+
+  void _showError(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFFF44336),
+      textColor: Colors.white,
+      fontSize: 15.0,
     );
   }
 
-  /// Navigates back to previous screen
-  void navigateBack(BuildContext context) {
-    if (context.mounted) {
-      context.pop();
-    }
-  }
-
-  /// Disposes all controllers
-  void _disposeControllers() {
-    currentPasswordController.dispose();
-    newPasswordController.dispose();
-    confirmPasswordController.dispose();
+  void _showSuccess(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF4CAF50),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
   }
 }

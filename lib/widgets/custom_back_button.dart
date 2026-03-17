@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'custom_button.dart';
+
 /// CustomBackButton - Reusable back button widget
 /// Follows OOP principles with composition and customization options
 class CustomBackButton extends StatelessWidget {
@@ -21,24 +23,19 @@ class CustomBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed ?? () => _handleBackPress(context),
-      child: Container(
-        width: size ?? 40,
-        height: size ?? 40,
-        decoration: ShapeDecoration(
-          color: backgroundColor ?? Colors.black.withValues(alpha: 0.10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(100),
-          ),
-        ),
-        child: Center(
-          child: Icon(
-            Icons.arrow_back_ios_new,
-            size: iconSize ?? 24,
-            color: iconColor ?? Colors.black,
-          ),
-        ),
+    final double buttonSize = size ?? 40;
+
+    return CircleFadeAnimation(
+      onPressed: onPressed ?? () => _handleBackPress(context),
+      // Fully circular clip
+      borderRadius: BorderRadius.circular(buttonSize / 2),
+      // Dark splash looks better on light bg buttons
+      splashColor: Colors.black,
+      child: _BackButtonContainer(
+        size: buttonSize,
+        backgroundColor: backgroundColor,
+        iconColor: iconColor,
+        iconSize: iconSize,
       ),
     );
   }
@@ -48,5 +45,42 @@ class CustomBackButton extends StatelessWidget {
     if (context.canPop()) {
       context.pop();
     }
+  }
+}
+
+/// Private container for back button visuals
+/// OOP: Separates visual rendering from gesture logic
+class _BackButtonContainer extends StatelessWidget {
+  final double size;
+  final Color? backgroundColor;
+  final Color? iconColor;
+  final double? iconSize;
+
+  const _BackButtonContainer({
+    required this.size,
+    this.backgroundColor,
+    this.iconColor,
+    this.iconSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: ShapeDecoration(
+        color: backgroundColor ?? Colors.black.withValues(alpha: 0.10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(size / 2),
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.arrow_back_ios_new,
+          size: iconSize ?? 24,
+          color: iconColor ?? Colors.black,
+        ),
+      ),
+    );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import '../views/auth_guard/auth_guard_screen.dart';
 import '../views/profile/security/security.dart';
 import '../views/profile/settings/settings.dart';
 import '../views/help_support/help_support.dart';
@@ -6,8 +7,9 @@ import '../views/help_support/faqs_help_center/faqs_help_center.dart';
 import '../views/help_support/contact_support/contact_support.dart';
 import '../views/help_support/privacy_policy/privacy_policy.dart';
 import '../views/help_support/terms_and_conditions/terms_and_conditions.dart';
+import '../views/set_new_password/set_new_password.dart';
+import '../views/verification_code_from_signup/verification_code_from_signup.dart';
 import 'app_path.dart';
-import '../views/splash_screen/splash_screen.dart';
 import '../views/on_boarding/on_boarding.dart';
 import '../views/log_in/log_in.dart';
 import '../views/sign_up/sign_up.dart';
@@ -23,58 +25,74 @@ import '../views/your_design/your_design.dart';
 import '../views/profile/profile.dart';
 import '../views/profile/edit_profile/edit_profile.dart';
 
-/// RoutePath class manages application routing using GoRouter
-/// Follows OOP principles with static configuration and centralized route management
+/// RoutePath - Centralized GoRouter configuration
+///
+/// Navigation decision flow (real-life app pattern):
+///   App open → / (AuthGuardScreen resolves auth) → correct screen
+///
+/// Follows 100% OOP: private constructor, static factory, single responsibility
 class RoutePath {
   // Private constructor to prevent instantiation
   RoutePath._();
 
-  /// Application router instance with all route configurations
+  /// Application router — initial route is AuthGuard which decides everything
   static final GoRouter router = GoRouter(
-    initialLocation: AppPath.onboarding,
+    initialLocation: AppPath.splash, // '/' → AuthGuardScreen
     routes: _buildRoutes(),
   );
 
-  /// Builds the route configuration list
-  /// This approach allows for better organization and scalability
+  /// Builds the complete route list
   static List<RouteBase> _buildRoutes() {
     return [
-      _createSplashRoute(),
+      // ── Auth Guard (true initial route) ───────────────────────────────────
+      _createAuthGuardRoute(),
+
+      // ── Auth Flow ─────────────────────────────────────────────────────────
       _createOnboardingRoute(),
       _createLoginRoute(),
       _createSignUpRoute(),
       _createForgotPasswordRoute(),
       _createVerificationCodeRoute(),
+      _createVerificationCodeFromSignupRoute(),
       _createChangePasswordRoute(),
+      _createSetNewPasswordRoute(),
       _createResetSuccessRoute(),
+
+      // ── Main App ──────────────────────────────────────────────────────────
       _createCreateRoute(),
       _createUploadImageRoute(),
       _createTextToDesignRoute(),
       _createCollectionsRoute(),
       _createYourDesignRoute(),
+
+      // ── Profile & Settings ────────────────────────────────────────────────
       _createProfileRoute(),
       _createEditProfileRoute(),
       _createSettingsRoute(),
       _createSecurityRoute(),
+
+      // ── Help & Support ────────────────────────────────────────────────────
       _createHelpSupportRoute(),
       _createFAQsHelpCenterRoute(),
       _createContactSupportRoute(),
       _createPrivacyPolicyRoute(),
       _createTermsAndConditionsRoute(),
-      // Add more routes here as the app grows
     ];
   }
 
-  /// Creates the splash screen route
-  static GoRoute _createSplashRoute() {
+  // ── Auth Guard ─────────────────────────────────────────────────────────────
+
+  /// '/' — Invisible bootstrap screen that resolves auth then redirects
+  static GoRoute _createAuthGuardRoute() {
     return GoRoute(
       path: AppPath.splash,
-      name: 'splash',
-      builder: (context, state) => const SplashScreen(),
+      name: 'authGuard',
+      builder: (context, state) => const AuthGuardScreen(),
     );
   }
 
-  /// Creates the onboarding screen route
+  // ── Auth Flow ──────────────────────────────────────────────────────────────
+
   static GoRoute _createOnboardingRoute() {
     return GoRoute(
       path: AppPath.onboarding,
@@ -83,7 +101,6 @@ class RoutePath {
     );
   }
 
-  /// Creates the login screen route
   static GoRoute _createLoginRoute() {
     return GoRoute(
       path: AppPath.login,
@@ -92,7 +109,6 @@ class RoutePath {
     );
   }
 
-  /// Creates the sign up screen route
   static GoRoute _createSignUpRoute() {
     return GoRoute(
       path: AppPath.signUp,
@@ -101,7 +117,6 @@ class RoutePath {
     );
   }
 
-  /// Creates the forgot password screen route
   static GoRoute _createForgotPasswordRoute() {
     return GoRoute(
       path: AppPath.forgotPassword,
@@ -110,7 +125,6 @@ class RoutePath {
     );
   }
 
-  /// Creates the verification code screen route
   static GoRoute _createVerificationCodeRoute() {
     return GoRoute(
       path: AppPath.verificationCode,
@@ -122,7 +136,17 @@ class RoutePath {
     );
   }
 
-  /// Creates the change password screen route
+  static GoRoute _createVerificationCodeFromSignupRoute() {
+    return GoRoute(
+      path: AppPath.verificationCodefromsignup,
+      name: 'verificationCodefromsignup',
+      builder: (context, state) {
+        final email = state.uri.queryParameters['email'];
+        return VerificationCodeFromSignup(email: email);
+      },
+    );
+  }
+
   static GoRoute _createChangePasswordRoute() {
     return GoRoute(
       path: AppPath.changePassword,
@@ -131,7 +155,17 @@ class RoutePath {
     );
   }
 
-  /// Creates the reset success screen route
+  static GoRoute _createSetNewPasswordRoute() {
+    return GoRoute(
+      path: AppPath.setNewPassword,
+      name: 'setNewPassword',
+      builder: (context, state) {
+        final resetToken = state.uri.queryParameters['reset_token'];
+        return SetNewPasswordScreen(resetToken: resetToken);
+      },
+    );
+  }
+
   static GoRoute _createResetSuccessRoute() {
     return GoRoute(
       path: AppPath.resetSuccess,
@@ -139,8 +173,9 @@ class RoutePath {
       builder: (context, state) => const ResetSuccessScreen(),
     );
   }
-  
-  /// Creates the create screen route
+
+  // ── Main App ───────────────────────────────────────────────────────────────
+
   static GoRoute _createCreateRoute() {
     return GoRoute(
       path: AppPath.create,
@@ -148,8 +183,7 @@ class RoutePath {
       builder: (context, state) => const CreateScreen(),
     );
   }
-  
-  /// Creates the upload image screen route
+
   static GoRoute _createUploadImageRoute() {
     return GoRoute(
       path: '/upload-image',
@@ -157,8 +191,7 @@ class RoutePath {
       builder: (context, state) => const UploadImageScreen(),
     );
   }
-  
-  /// Creates the text to design screen route
+
   static GoRoute _createTextToDesignRoute() {
     return GoRoute(
       path: '/text-to-design',
@@ -166,8 +199,7 @@ class RoutePath {
       builder: (context, state) => const TextToDesignScreen(),
     );
   }
-  
-  /// Creates the collections screen route
+
   static GoRoute _createCollectionsRoute() {
     return GoRoute(
       path: AppPath.collection,
@@ -175,8 +207,7 @@ class RoutePath {
       builder: (context, state) => const CollectionsScreen(),
     );
   }
-  
-  /// Creates the your design screen route
+
   static GoRoute _createYourDesignRoute() {
     return GoRoute(
       path: AppPath.yourdesign,
@@ -184,8 +215,9 @@ class RoutePath {
       builder: (context, state) => const YourDesignScreen(),
     );
   }
-  
-  /// Creates the profile screen route
+
+  // ── Profile ────────────────────────────────────────────────────────────────
+
   static GoRoute _createProfileRoute() {
     return GoRoute(
       path: AppPath.profile,
@@ -193,8 +225,7 @@ class RoutePath {
       builder: (context, state) => const Profile(),
     );
   }
-  
-  /// Creates the edit profile screen route
+
   static GoRoute _createEditProfileRoute() {
     return GoRoute(
       path: AppPath.editProfile,
@@ -202,8 +233,7 @@ class RoutePath {
       builder: (context, state) => const EditProfile(),
     );
   }
-  
-  /// Creates the settings screen route
+
   static GoRoute _createSettingsRoute() {
     return GoRoute(
       path: AppPath.settings,
@@ -211,8 +241,7 @@ class RoutePath {
       builder: (context, state) => const SettingsScreen(),
     );
   }
-  
-  /// Creates the security screen route
+
   static GoRoute _createSecurityRoute() {
     return GoRoute(
       path: AppPath.security,
@@ -220,8 +249,9 @@ class RoutePath {
       builder: (context, state) => const SecurityScreen(),
     );
   }
-  
-  /// Creates the help & support screen route
+
+  // ── Help & Support ─────────────────────────────────────────────────────────
+
   static GoRoute _createHelpSupportRoute() {
     return GoRoute(
       path: AppPath.helpSupport,
@@ -229,8 +259,7 @@ class RoutePath {
       builder: (context, state) => const HelpSupportScreen(),
     );
   }
-  
-  /// Creates the FAQs help center screen route
+
   static GoRoute _createFAQsHelpCenterRoute() {
     return GoRoute(
       path: AppPath.faqsHelpCenter,
@@ -238,8 +267,7 @@ class RoutePath {
       builder: (context, state) => const FAQsHelpCenterScreen(),
     );
   }
-  
-  /// Creates the contact support screen route
+
   static GoRoute _createContactSupportRoute() {
     return GoRoute(
       path: AppPath.contactSupport,
@@ -247,8 +275,7 @@ class RoutePath {
       builder: (context, state) => const ContactSupportScreen(),
     );
   }
-  
-  /// Creates the privacy policy screen route
+
   static GoRoute _createPrivacyPolicyRoute() {
     return GoRoute(
       path: AppPath.privacyPolicy,
@@ -256,8 +283,7 @@ class RoutePath {
       builder: (context, state) => const PrivacyPolicyScreen(),
     );
   }
-  
-  /// Creates the terms and conditions screen route
+
   static GoRoute _createTermsAndConditionsRoute() {
     return GoRoute(
       path: AppPath.termsAndConditions,

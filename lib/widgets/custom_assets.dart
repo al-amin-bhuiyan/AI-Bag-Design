@@ -45,54 +45,10 @@ class CustomAssets {
   static const String standUpPouchFull = '$_imagesPath/Stand_Up_Pouch_full_bag.png';
   
   // Full Graphic Bag Variations
-  static const String fullGraphicBag1 = '$_imagesPath/full_graphic_bag_1.png';
-  static const String fullGraphicBag2 = '$_imagesPath/full_graphic_bag_2.png';
-  static const String fullGraphicBag3 = '$_imagesPath/full_graphic_bag_3.png';
-  static const String fullGraphicBag4 = '$_imagesPath/full_graphic_bag_4.png';
-  static const String fullGraphicBag5 = '$_imagesPath/full_graphic_bag_5.png';
-  static const String fullGraphicBag6 = '$_imagesPath/full_graphic_bag_6.png';
-  
+
   // Label Bag Variations
-  static const String labelBag1 = '$_imagesPath/label_bag_1.png';
-  static const String labelBag2 = '$_imagesPath/label_bag_2.png';
-  static const String labelBag3 = '$_imagesPath/label_bag_3.png';
-  static const String labelBag4 = '$_imagesPath/label_bag_4.png';
-  static const String labelBag5 = '$_imagesPath/label_bag_5.png';
-  static const String labelBag6 = '$_imagesPath/label_bag_6.png';
-  
-  // Collection Images (with labels embedded)
-  static const String collectionLabelBag1 = '$_imagesPath/collection_label_bag_1.png';
-  static const String collectionFullGraphicBag1 = '$_imagesPath/collection_full_graphic_bag_1.png';
-  static const String collectionLabelBag2 = '$_imagesPath/collection_label_bag_2.png';
-  static const String collectionFullGraphicBag2 = '$_imagesPath/collection_full_graphic_bag_2.png';
-  static const String collectionLabelBag3 = '$_imagesPath/collection_label_bag_3.png';
-  static const String collectionFullGraphicBag3 = '$_imagesPath/collection_full_graphic_bag_3.png';
-  static const String collectionLabelBag4 = '$_imagesPath/collection_label_bag_4.png';
-  static const String collectionFullGraphicBag4 = '$_imagesPath/collection_full_graphic_bag_4.png';
-  static const String collectionLabelBag5 = '$_imagesPath/collection_label_bag_5.png';
-  static const String collectionFullGraphicBag5 = '$_imagesPath/collection_full_graphic_bag_5.png';
-  static const String collectionLabelBag6 = '$_imagesPath/collection_label_bag_6.png';
-  static const String collectionFullGraphicBag6 = '$_imagesPath/collection_full_graphic_bag_6.png';
-  
-  // Mockup Images with Different Designs
-  static const String mockupImage1 = '$_imagesPath/mockup_with_different_image_1.png';
-  static const String mockupImage2 = '$_imagesPath/mockup_with_different_image_2.png';
-  static const String mockupImage3 = '$_imagesPath/mockup_with_different_image_3.png';
-  static const String mockupImage4 = '$_imagesPath/mockup_with_different_image_4.png';
-  static const String mockupImage5 = '$_imagesPath/mockup_with_different_image_5.png';
-  static const String mockupImage6 = '$_imagesPath/mockup_with_different_image_6.png';
-  static const String mockupImage7 = '$_imagesPath/mockup_with_different_image_7.png';
-  static const String mockupImage8 = '$_imagesPath/mockup_with_different_image_8.png';
-  
-  // Generic Images (numbered sequence)
-  static const String imageFirst = '$_imagesPath/image_first.png';
-  static const String imageSecond = '$_imagesPath/image_second.png';
-  static const String imageThird = '$_imagesPath/image_third.png';
-  static const String imageFourth = '$_imagesPath/image_fourth.png';
-  static const String imageFiveth = '$_imagesPath/image_fiveth.png';
-  static const String imageSix = '$_imagesPath/image_six.png';
-  
-  // Profile Images
+
+
   static const String personimage = '$_imagesPath/person_image.png';
 
   static const String texttodesignimage ='$_imagesPath/text_to_design_second_page.png';
@@ -167,59 +123,11 @@ class CustomAssets {
         quadSealBag,
         standUpPouch,
         standUpPouchFull,
-        
-        // Full Graphic Bag Variations
-        fullGraphicBag1,
-        fullGraphicBag2,
-        fullGraphicBag3,
-        fullGraphicBag4,
-        fullGraphicBag5,
-        fullGraphicBag6,
-        
-        // Label Bag Variations
-        labelBag1,
-        labelBag2,
-        labelBag3,
-        labelBag4,
-        labelBag5,
-        labelBag6,
-        
-        // Collection Images (with labels)
-        collectionLabelBag1,
-        collectionFullGraphicBag1,
-        collectionLabelBag2,
-        collectionFullGraphicBag2,
-        collectionLabelBag3,
-        collectionFullGraphicBag3,
-        collectionLabelBag4,
-        collectionFullGraphicBag4,
-        collectionLabelBag5,
-        collectionFullGraphicBag5,
-        collectionLabelBag6,
-        collectionFullGraphicBag6,
-        
-        // Mockup Images
-        mockupImage1,
-        mockupImage2,
-        mockupImage3,
-        mockupImage4,
-        mockupImage5,
-        mockupImage6,
-        mockupImage7,
-        mockupImage8,
-        
-        // Generic Images (numbered)
-        imageFirst,
-        imageSecond,
-        imageThird,
-        imageFourth,
-        imageFiveth,
-        imageSix,
-        
+
         // Profile
         personimage,
 
-    texttodesignimage
+        texttodesignimage,
       ];
   
   /// Returns all icon paths

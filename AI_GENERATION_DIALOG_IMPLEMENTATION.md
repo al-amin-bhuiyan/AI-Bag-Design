@@ -139,8 +139,7 @@ void _handleAddToDesign(BuildContext context) {
 
 **Image Already Added**:
 ```dart
-static const String texttodesignimage = '$_imagesPath/text_to_design_second_page.png';
-```
+
 
 **Added to `allImages` getter**:
 ```dart

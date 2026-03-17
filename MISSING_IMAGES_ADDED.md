@@ -26,13 +26,7 @@ Successfully added the 6 missing generic images that were present in the `assets
 ### Constants Section:
 ```dart
 // Generic Images (numbered sequence)
-static const String imageFirst = '$_imagesPath/image_first.png';
-static const String imageSecond = '$_imagesPath/image_second.png';
-static const String imageThird = '$_imagesPath/image_third.png';
-static const String imageFourth = '$_imagesPath/image_fourth.png';
-static const String imageFiveth = '$_imagesPath/image_fiveth.png';
-static const String imageSix = '$_imagesPath/image_six.png';
-```
+
 
 ### Updated allImages Getter:
 ```dart

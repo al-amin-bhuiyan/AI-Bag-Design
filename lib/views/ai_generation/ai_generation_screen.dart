@@ -4,17 +4,20 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../utils/app_fonts.dart';
 import '../../widgets/custom_assets.dart';
+import '../../widgets/custom_button.dart';
 
 /// AIGenerationScreen - Full page AI generation with loading and result states
 /// Follows OOP principles with clean separation and reusability
 class AIGenerationScreen extends StatefulWidget {
   final Future<void> Function() onGenerate;
+  final String? Function()? getGeneratedImageUrl;
   final VoidCallback? onAddToDesign;
   final VoidCallback? onRegenerate;
 
   const AIGenerationScreen({
     super.key,
     required this.onGenerate,
+    this.getGeneratedImageUrl,
     this.onAddToDesign,
     this.onRegenerate,
   });
@@ -80,6 +83,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen> {
             ? _LoadingContent()
             : _showResult
                 ? _ResultContent(
+                    generatedImageUrl: widget.getGeneratedImageUrl?.call(),
                     onAddToDesign: widget.onAddToDesign,
                     onRegenerate: widget.onRegenerate,
                     onClose: () {
@@ -167,13 +171,13 @@ class _LoadingContentState extends State<_LoadingContent>
                   ).copyWith(height: 1.22),
                 ),
               ),
-              GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Icon(
-                  Icons.close,
-                  size: 24.sp,
-                  color: const Color(0xFF0F0F0F),
-                ),
+              CustomCloseButton(
+                onPressed: () => Navigator.of(context).pop(),
+                backgroundColor: Colors.transparent,
+                iconColor: const Color(0xFF0F0F0F),
+                size: 32.w,
+                iconSize: 24.sp,
+                splashColor: Colors.black,
               ),
             ],
           ),
@@ -439,11 +443,13 @@ class _NeuralNetworkPainter extends CustomPainter {
 
 /// Result content showing generated design
 class _ResultContent extends StatelessWidget {
+  final String? generatedImageUrl;
   final VoidCallback? onAddToDesign;
   final VoidCallback? onRegenerate;
   final VoidCallback onClose;
 
   const _ResultContent({
+    this.generatedImageUrl,
     this.onAddToDesign,
     this.onRegenerate,
     required this.onClose,
@@ -475,9 +481,8 @@ class _ResultContent extends StatelessWidget {
                   ).copyWith(height: 1.22),
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  // Dismiss keyboard before closing
+              CustomCloseButton(
+                onPressed: () {
                   FocusScope.of(context).unfocus();
                   Future.delayed(const Duration(milliseconds: 100), () {
                     if (context.mounted) {
@@ -485,11 +490,11 @@ class _ResultContent extends StatelessWidget {
                     }
                   });
                 },
-                child: Icon(
-                  Icons.close,
-                  size: 24.sp,
-                  color: const Color(0xFF0F0F0F),
-                ),
+                backgroundColor: Colors.transparent,
+                iconColor: const Color(0xFF0F0F0F),
+                size: 32.w,
+                iconSize: 24.sp,
+                splashColor: Colors.black,
               ),
             ],
           ),
@@ -548,10 +553,7 @@ class _ResultContent extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(2.r),
                               ),
                             ),
-                            child: Image.asset(
-                              CustomAssets.texttodesignimage,
-                              fit: BoxFit.cover,
-                            ),
+                            child: _buildGeneratedImage(),
                           ),
                         ),
                       ),
@@ -612,9 +614,14 @@ class _ResultContent extends StatelessWidget {
                     GestureDetector(
                       onTap: () {
                         // Dismiss keyboard first
-                        FocusScope.of(context).unfocus();
+
+                        final currentFocus = FocusScope.of(context);
+                        if (currentFocus.hasFocus) {
+                          currentFocus.unfocus();
+                        }
+                       // onRegenerate?.call();
                         // Small delay to ensure keyboard is dismissed
-                        Future.delayed(const Duration(milliseconds: 150), () {
+                        Future.delayed(const Duration(milliseconds: 1), () {
                           // Call the callback - it will handle showing mockup dialog
                           onAddToDesign?.call();
                         });
@@ -652,7 +659,7 @@ class _ResultContent extends StatelessWidget {
                             style: AppFonts.interMedium(
                               fontSize: 16.sp,
                               color: Colors.white,
-                            ).copyWith(height: 1.50),
+                            ).copyWith(height: 1.60),
                           ),
                         ),
                       ),
@@ -724,6 +731,27 @@ class _ResultContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildGeneratedImage() {
+    final imageUrl = generatedImageUrl?.trim() ?? '';
+    if (imageUrl.isEmpty) {
+      return Image.asset(
+        CustomAssets.texttodesignimage,
+        fit: BoxFit.cover,
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Image.asset(
+          CustomAssets.texttodesignimage,
+          fit: BoxFit.cover,
+        );
+      },
     );
   }
 }

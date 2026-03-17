@@ -107,12 +107,13 @@ class _AppBar extends StatelessWidget {
               ).copyWith(height: 1.22),
             ),
           ),
-       //
-          IconButton(
+          CustomCloseButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close),
-            splashRadius: 22.r,
-            color: const Color(0xFF0F0F0F),
+            backgroundColor: Colors.transparent,
+            iconColor: const Color(0xFF0F0F0F),
+            size: 32.w,
+            iconSize: 24.sp,
+            splashColor: Colors.black,
           ),
         ],
       ),
@@ -121,88 +122,84 @@ class _AppBar extends StatelessWidget {
 }
 
 /// Action Buttons Widget (Top Right)
-class _ActionButtons extends StatelessWidget {
-  const _ActionButtons();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Light Green Button
-          Container(
-            width: 30.w,
-            height: 30.h,
-            decoration: ShapeDecoration(
-              color: const Color(0xFFECFDF5),
-              shape: RoundedRectangleBorder(
-                side: BorderSide(
-                  width: 1,
-                  color: const Color(0xFFD0FAE4),
-                ),
-                borderRadius: BorderRadius.circular(33554400.r),
-              ),
-              shadows: const [
-                BoxShadow(
-                  color: Color(0x19000000),
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                  spreadRadius: -1,
-                ),
-                BoxShadow(
-                  color: Color(0x19000000),
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.lightbulb_outline,
-              size: 16.sp,
-              color: const Color(0xFF009966),
-            ),
-          ),
-          
-          SizedBox(width: 8.w),
-          
-          // Green Button (Active)
-          Container(
-            width: 30.w,
-            height: 30.h,
-            decoration: ShapeDecoration(
-              color: const Color(0xFF009966),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(33554400.r),
-              ),
-              shadows: const [
-                BoxShadow(
-                  color: Color(0x19000000),
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                  spreadRadius: -1,
-                ),
-                BoxShadow(
-                  color: Color(0x19000000),
-                  blurRadius: 3,
-                  offset: Offset(0, 1),
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.auto_awesome,
-              size: 16.sp,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// class _ActionButtons extends StatelessWidget {
+//   const _ActionButtons();
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Align(
+//       alignment: Alignment.centerRight,
+//       child: Row(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           // Light Green Button
+//           Container(
+//             width: 30.w,
+//             height: 30.h,
+//             decoration: ShapeDecoration(
+//               color: const Color(0xFFECFDF5),
+//               shape: RoundedRectangleBorder(
+//                 side: BorderSide(
+//                   width: 1,
+//                   color: const Color(0xFFD0FAE4),
+//                 ),
+//                 borderRadius: BorderRadius.circular(33554400.r),
+//               ),
+//               shadows: const [
+//                 BoxShadow(
+//                   color: Color(0x19000000),
+//                   blurRadius: 2,
+//                   offset: Offset(0, 1),
+//                   spreadRadius: -1,
+//                 ),
+//                 BoxShadow(
+//                   color: Color(0x19000000),
+//                   blurRadius: 3,
+//                   offset: Offset(0, 1),
+//                   spreadRadius: 0,
+//                 ),
+//               ],
+//             ),
+//
+//           ),
+//
+//           SizedBox(width: 8.w),
+//
+//           // Green Button (Active)
+//           Container(
+//             width: 30.w,
+//             height: 30.h,
+//             decoration: ShapeDecoration(
+//               color: const Color(0xFF009966),
+//               shape: RoundedRectangleBorder(
+//                 borderRadius: BorderRadius.circular(33554400.r),
+//               ),
+//               shadows: const [
+//                 BoxShadow(
+//                   color: Color(0x19000000),
+//                   blurRadius: 2,
+//                   offset: Offset(0, 1),
+//                   spreadRadius: -1,
+//                 ),
+//                 BoxShadow(
+//                   color: Color(0x19000000),
+//                   blurRadius: 3,
+//                   offset: Offset(0, 1),
+//                   spreadRadius: 0,
+//                 ),
+//               ],
+//             ),
+//             child: Icon(
+//               Icons.auto_awesome,
+//               size: 16.sp,
+//               color: Colors.white,
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
 /// Content Section Widget
 class _ContentSection extends StatelessWidget {
@@ -226,11 +223,11 @@ class _ContentSection extends StatelessWidget {
             _TextInputField(controller: controller),
             
             // Action Buttons positioned at bottom right corner
-            Positioned(
-              right: 12.w,
-              bottom: 12.h,
-              child: _ActionButtons(),
-            ),
+            // Positioned(
+            //   right: 12.w,
+            //   bottom: 12.h,
+            //   child: _ActionButtons(),
+            // ),
           ],
         ),
         

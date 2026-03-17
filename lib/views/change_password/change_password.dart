@@ -14,8 +14,9 @@ class ChangePasswordScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize controller
-    final controller = Get.put(ChangePasswordController());
+    // Use Get.find() — controller is registered in Binding via lazyPut(fenix: true)
+    // Get.put() would create a new orphaned instance skipping onInit lifecycle
+    final controller = Get.find<ChangePasswordController>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -70,7 +71,7 @@ class ChangePasswordScreen extends StatelessWidget {
                         label: 'Save',
                         onPressed: controller.isLoading.value 
                             ? null 
-                            : () => controller.changePassword(context),
+                            : () => controller.changePassword(),
                         isLoading: controller.isLoading.value,
                         backgroundColor: const Color(0xFF1F7CD5),
                         height: 54.h,

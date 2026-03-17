@@ -1,204 +1,164 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
+import '../../models/api_response_model.dart';
+import '../../models/login_model.dart';
 import '../../routes/app_path.dart';
+import '../../services/auth_service.dart';
+import '../../services/auth_state_service.dart';
+import '../../services/session_data_isolation_service.dart';
+import '../../services/token_storage_service.dart';
+import '../../services/user_session_service.dart';
 
 /// LogInController manages login screen logic and state
-/// Follows OOP principles with encapsulation and single responsibility
+/// Calls real login API, persists JWT tokens, and navigates to create screen
+/// Follows 100% OOP: encapsulation, single responsibility, composition
 class LogInController extends GetxController {
-  // Text editing controllers
-  final TextEditingController emailController = TextEditingController(text: 'md@gmail.com');
-  final TextEditingController passwordController = TextEditingController(text: '12345678');
+  // ─── Dependencies (Composition) ───────────────────────────────────────────
+  final AuthService _authService = AuthService.instance;
+  final TokenStorageService _tokenStorage = TokenStorageService.instance;
 
-  // Observable state
+  // ─── Text Editing Controllers ─────────────────────────────────────────────
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  // ─── Observable state ────────────────────────────────────────────────────
   final RxBool _isLoading = false.obs;
   final RxBool _rememberMe = false.obs;
   final RxBool _obscurePassword = true.obs;
 
-  // Getters
+  // ─── Public Getters ───────────────────────────────────────────────────────
   bool get isLoading => _isLoading.value;
   bool get rememberMe => _rememberMe.value;
   bool get obscurePassword => _obscurePassword.value;
-  
-  // Email and password getters
-  String get email => emailController.text;
+  String get email => emailController.text.trim();
   String get password => passwordController.text;
+
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
 
   @override
   void onInit() {
     super.onInit();
-    _initializeController();
+    _loadSavedEmail();
   }
 
   @override
   void onClose() {
-    _disposeControllers();
+    emailController.dispose();
+    passwordController.dispose();
     super.onClose();
   }
 
-  /// Initializes the controller
-  void _initializeController() {
-    // Load saved email if remember me was checked
-    _loadSavedCredentials();
-  }
-
-  /// Disposes text editing controllers
-  void _disposeControllers() {
-    emailController.dispose();
-    passwordController.dispose();
-  }
+  // ─── Public Methods ───────────────────────────────────────────────────────
 
   /// Toggles remember me checkbox
-  void toggleRememberMe() {
-    _rememberMe.value = !_rememberMe.value;
-  }
+  void toggleRememberMe() => _rememberMe.value = !_rememberMe.value;
 
   /// Toggles password visibility
-  void togglePasswordVisibility() {
-    _obscurePassword.value = !_obscurePassword.value;
-  }
+  void togglePasswordVisibility() =>
+      _obscurePassword.value = !_obscurePassword.value;
 
   /// Validates email format
   String? validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email is required';
-    }
-    
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
+    if (value == null || value.trim().isEmpty) return 'Email is required';
+    final emailRegex = RegExp(r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value.trim())) {
       return 'Please enter a valid email';
     }
-    
     return null;
   }
 
   /// Validates password
   String? validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password is required';
-    }
-    
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    
+    if (value == null || value.isEmpty) return 'Password is required';
+    if (value.length < 6) return 'Password must be at least 6 characters';
     return null;
   }
 
-  /// Validates all fields
-  bool validateFields() {
-    final emailError = validateEmail(email);
-    final passwordError = validatePassword(password);
-    
-    if (emailError != null) {
-      Get.snackbar(
-        'Validation Error',
-        emailError,
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return false;
-    }
-    
-    if (passwordError != null) {
-      Get.snackbar(
-        'Validation Error',
-        passwordError,
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return false;
-    }
-    
-    return true;
-  }
-
-  /// Handles sign in action
+  /// Handles sign in action — calls real API
   Future<void> signIn(BuildContext context) async {
-    if (!validateFields()) return;
-    
+    // Validate fields and show toast on error
+    final emailError = validateEmail(email);
+    if (emailError != null) { _showError(emailError); return; }
+
+    final passwordError = validatePassword(password);
+    if (passwordError != null) { _showError(passwordError); return; }
+
+    _isLoading.value = true;
+
     try {
-      _isLoading.value = true;
-      
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // TODO: Implement actual sign in logic
-      debugPrint('Signing in with email: $email');
-      
-      if (_rememberMe.value) {
-        _saveCredentials();
+      debugPrint('🔑 Logging in: $email');
+
+      final ApiResponse<LoginResponseModel> response =
+          await _authService.login(email: email, password: password);
+
+      if (response.success && response.data != null) {
+        final LoginResponseModel data = response.data!;
+
+        if (data.accessToken.trim().isEmpty || data.refreshToken.trim().isEmpty) {
+          _showError('Login failed. Please check your credentials.');
+          return;
+        }
+
+        debugPrint('✅ Login success: ${data.user.name}');
+
+        // Ensure old in-memory user data/controllers are removed on account switch.
+        SessionDataIsolationService.instance.clearUserScopedState();
+
+        // Persist tokens and user info
+        await _tokenStorage.saveTokens(
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+        );
+        await _tokenStorage.saveUserInfo(
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          image: data.user.image,
+        );
+
+        // Populate UserSessionService (single source of truth)
+        // so ProfileCard, NavBar etc. show real data instantly without re-fetching
+        UserSessionService.instance.id.value       = data.user.id;
+        UserSessionService.instance.name.value     = data.user.name;
+        UserSessionService.instance.email.value    = data.user.email;
+        UserSessionService.instance.imageUrl.value =
+            data.user.image.startsWith('http')
+                ? data.user.image
+                : 'http://10.10.7.74:8000${data.user.image}';
+        UserSessionService.instance.isLoaded.value = true;
+
+        // Mark auth state as authenticated
+        AuthStateService.instance.setAuthenticated();
+
+        _showSuccess('Welcome back, ${data.user.name}! 👋');
+
+        // Small delay so toast is visible
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        // Navigate to create screen — replace entire stack
+        if (context.mounted) context.go(AppPath.create);
+      } else {
+        _showError(_normalizeLoginErrorMessage(response.errorMessage));
       }
-      
-      // Navigate to collections screen on success
-      context.push(AppPath.create);
-      
-      Get.snackbar(
-        'Success',
-        'Login successful!',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Login failed: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      debugPrint('❌ Login error: $e');
+      _showError('Login failed. Please try again.');
     } finally {
       _isLoading.value = false;
     }
   }
 
-  /// Handles sign in with Google
+  /// Handles Google sign in (placeholder)
   Future<void> signInWithGoogle() async {
-    try {
-      _isLoading.value = true;
-      
-      // TODO: Implement Google sign in
-      await Future.delayed(const Duration(seconds: 1));
-      debugPrint('Signing in with Google');
-      
-      Get.snackbar(
-        'Info',
-        'Google sign in coming soon!',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Google sign in failed: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
+    _showInfo('Google sign in coming soon!');
   }
 
-  /// Handles sign in with Apple
+  /// Handles Apple sign in (placeholder)
   Future<void> signInWithApple() async {
-    try {
-      _isLoading.value = true;
-      
-      // TODO: Implement Apple sign in
-      await Future.delayed(const Duration(seconds: 1));
-      debugPrint('Signing in with Apple');
-      
-      Get.snackbar(
-        'Info',
-        'Apple sign in coming soon!',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Apple sign in failed: ${e.toString()}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
+    _showInfo('Apple sign in coming soon!');
   }
 
   /// Navigates to forgot password screen
@@ -211,15 +171,64 @@ class LogInController extends GetxController {
     context.push(AppPath.signUp);
   }
 
-  /// Loads saved credentials
-  void _loadSavedCredentials() {
-    // TODO: Implement loading from secure storage
-    // Example: emailController.text = await storage.read('email');
+  // ─── Private Helpers ──────────────────────────────────────────────────────
+
+  /// Pre-fills email if remembered
+  Future<void> _loadSavedEmail() async {
+    final savedEmail = await _tokenStorage.getUserEmail();
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      emailController.text = savedEmail;
+      _rememberMe.value = true;
+    }
   }
 
-  /// Saves credentials if remember me is checked
-  void _saveCredentials() {
-    // TODO: Implement saving to secure storage
-    // Example: await storage.write('email', email);
+  // ─── Toast Helpers ────────────────────────────────────────────────────────
+
+  void _showError(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFFF44336),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
+  }
+
+  void _showSuccess(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF4CAF50),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
+  }
+
+  void _showInfo(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF2196F3),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
+  }
+
+  String _normalizeLoginErrorMessage(String? message) {
+    final raw = (message ?? '').trim();
+    if (raw.isEmpty) return 'Login failed. Please check your email and password.';
+
+    final lower = raw.toLowerCase();
+    if (lower.contains('authentication failed') ||
+        lower.contains('please login') ||
+        lower.contains('please log in') ||
+        lower.contains('credentials')) {
+      return 'Invalid email or password.';
+    }
+
+    return raw;
   }
 }

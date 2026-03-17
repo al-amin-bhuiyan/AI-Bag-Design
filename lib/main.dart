@@ -35,6 +35,7 @@ class MyApp extends StatelessWidget {
       ensureScreenSize: true,
       builder: (context, child) {
         return GetMaterialApp.router(
+          title: 'AI Bag Design',
           debugShowCheckedModeBanner: false,
           theme: _lightTheme,
           routeInformationParser: RoutePath.router.routeInformationParser,

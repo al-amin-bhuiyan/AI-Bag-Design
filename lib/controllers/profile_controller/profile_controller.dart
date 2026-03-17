@@ -1,156 +1,131 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import '../../models/api_response_model.dart';
+import '../../models/user_profile_model.dart';
+import '../../routes/app_path.dart';
+import '../../services/auth_service.dart';
+import '../../services/auth_state_service.dart';
+import '../../services/session_data_isolation_service.dart';
+import '../../services/token_storage_service.dart';
+import '../../services/user_session_service.dart';
 
 /// ProfileController - Manages profile screen state and business logic
-/// Follows OOP principles with single responsibility and separation of concerns
+/// Reads user data from UserSessionService (single source of truth)
+/// Any update in EditProfile instantly reflects here via reactive observables
+/// Follows 100% OOP: encapsulation, single responsibility, composition
 class ProfileController extends GetxController {
-  // ============ Observables ============
-  
-  // User profile data
-  final RxString userName = 'Mohammad Shobuj'.obs;
-  final RxString userEmail = 'example@gmail.com'.obs;
-  final RxString userProfileImage = ''.obs;
-  
-  // Loading states
-  final RxBool isLoading = false.obs;
+  // ─── Dependencies ─────────────────────────────────────────────────────────
+  final AuthService _authService = AuthService.instance;
+  final TokenStorageService _tokenStorage = TokenStorageService.instance;
+
+  /// Single source of truth for user data — shared across all controllers
+  final UserSessionService session = UserSessionService.instance;
+
+  // ─── Expose session observables for views (shorthand getters) ─────────────
+  RxString get userName         => session.name;
+  RxString get userEmail        => session.email;
+  RxString get userProfileImage => session.imageUrl;
+  RxBool   get isAdmin          => session.isAdmin;
+  RxInt    get userId           => session.id;
+
+  // ─── Loading states ───────────────────────────────────────────────────────
+  final RxBool isLoading    = false.obs;
   final RxBool isLoggingOut = false.obs;
 
-  // ============ Lifecycle Methods ============
-  
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
+
   @override
   void onInit() {
     super.onInit();
-    _loadUserProfile();
+    // If session not yet loaded, load cache instantly then re-fetch from API
+    if (!session.isLoaded.value) {
+      _loadCachedProfile();
+    }
+    fetchProfile();
   }
 
-  @override
-  void onReady() {
-    super.onReady();
+  // ─── Private ──────────────────────────────────────────────────────────────
+
+  Future<void> _loadCachedProfile() async {
+    await session.loadFromCache();
   }
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
+  // ─── Public Methods ───────────────────────────────────────────────────────
 
-  // ============ Private Methods ============
-  
-  /// Loads user profile data
-  void _loadUserProfile() {
-    // TODO: Load user profile from API or local storage
-    // This is placeholder data
-    userName.value = 'Mohammad Shobuj';
-    userEmail.value = 'example@gmail.com';
-    userProfileImage.value = ''; // Will use placeholder
-  }
-
-  /// Sets loading state
-  void _setLoading(bool value) {
-    isLoading.value = value;
-  }
-
-  /// Sets logout loading state
-  void _setLoggingOut(bool value) {
-    isLoggingOut.value = value;
-  }
-
-  // ============ Public Methods ============
-  
-  /// Navigates to Edit Profile screen
-  void navigateToEditProfile(BuildContext context) {
-    context.push('/edit-profile');
-    print('🔵 Navigate to Edit Profile');
-  }
-
-  /// Navigates to Settings screen
-  void navigateToSettings(BuildContext context) {
-    context.push('/settings');
-    print('🔵 Navigate to Settings');
-  }
-
-  /// Navigates to Security screen
-  void navigateToSecurity(BuildContext context) {
-    context.push('/security');
-    print('🔵 Navigate to Security');
-  }
-
-  /// Navigates to Help & Support screen
-  void navigateToHelpSupport(BuildContext context) {
-    context.push('/help-support');
-    print('🔵 Navigate to Help & Support');
-  }
-
-  /// Shows logout confirmation dialog
-  /// Returns true if user confirms, false otherwise
-  Future<bool> showLogoutDialog() async {
-    // This will be called from the UI to show the dialog
-    // The actual dialog will be shown from the view
-    return true; // Placeholder
-  }
-
-  /// Handles user logout
-  Future<void> logout() async {
-    _setLoggingOut(true);
-    
+  /// Fetches real user profile from API using saved Bearer token
+  /// GET /accounts/user/profile/
+  /// Updates UserSessionService → all screens reading session observables
+  /// rebuild automatically
+  Future<void> fetchProfile() async {
+    isLoading.value = true;
     try {
-      // TODO: Implement actual logout logic
-      // - Clear user session
-      // - Clear local storage
-      // - Call logout API
-      await Future.delayed(const Duration(seconds: 1));
-      
-      print('✅ Logout successful');
-      
-      // Navigate to login screen and clear navigation stack
-      // Get.offAllNamed(AppPath.login);
-      
+      final String? accessToken = await _tokenStorage.getAccessToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        debugPrint('⚠️ No access token — cannot fetch profile');
+        return;
+      }
+
+      final ApiResponse<UserProfileModel> response =
+          await _authService.getProfile(accessToken: accessToken);
+
+      if (response.success && response.data != null) {
+        // Update the single source of truth — ProfileCard, NavBar, etc. all rebuild
+        await session.updateFromProfile(response.data!);
+        debugPrint('✅ ProfileController: fetched ${session.name.value}');
+      } else {
+        debugPrint('⚠️ Profile fetch failed: ${response.errorMessage}');
+      }
     } catch (e) {
-      print('❌ Logout failed: $e');
+      debugPrint('❌ Profile fetch error: $e');
     } finally {
-      _setLoggingOut(false);
+      isLoading.value = false;
     }
   }
 
-  /// Performs actual logout after confirmation
-  Future<void> confirmLogout() async {
-    await logout();
-  }
+  /// Refreshes profile (pull-to-refresh compatible)
+  Future<void> refreshProfile() async => fetchProfile();
 
-  /// Updates user profile data
-  Future<void> updateProfile({
-    String? name,
-    String? email,
-    String? profileImage,
-  }) async {
-    _setLoading(true);
-    
+  // ─── Navigation ───────────────────────────────────────────────────────────
+
+  void navigateToEditProfile(BuildContext context) =>
+      context.push(AppPath.editProfile);
+
+  void navigateToSettings(BuildContext context) =>
+      context.push(AppPath.settings);
+
+  void navigateToSecurity(BuildContext context) =>
+      context.push(AppPath.security);
+
+  void navigateToHelpSupport(BuildContext context) =>
+      context.push(AppPath.helpSupport);
+
+  // ─── Logout ───────────────────────────────────────────────────────────────
+
+  Future<void> logout(BuildContext context) async {
+    isLoggingOut.value = true;
     try {
-      // TODO: Implement API call to update profile
-      if (name != null) userName.value = name;
-      if (email != null) userEmail.value = email;
-      if (profileImage != null) userProfileImage.value = profileImage;
-      
-      print('✅ Profile updated successfully');
+      await _tokenStorage.clearAll();
+      SessionDataIsolationService.instance.clearUserScopedState();
+      AuthStateService.instance.setUnauthenticated();
+      debugPrint('✅ Logout successful');
+      // Navigate using the context passed from the view — always valid
+      if (context.mounted) context.go(AppPath.login);
     } catch (e) {
-      print('❌ Profile update failed: $e');
+      debugPrint('❌ Logout failed: $e');
+      Fluttertoast.showToast(
+        msg: 'Logout failed. Please try again.',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: const Color(0xFFF44336),
+        textColor: Colors.white,
+        fontSize: 15.0,
+      );
     } finally {
-      _setLoading(false);
+      isLoggingOut.value = false;
     }
   }
 
-  /// Refreshes profile data
-  Future<void> refreshProfile() async {
-    _setLoading(true);
-    
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-      _loadUserProfile();
-      print('✅ Profile refreshed');
-    } catch (e) {
-      print('❌ Profile refresh failed: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
+  Future<void> confirmLogout(BuildContext context) async => logout(context);
 }

@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
+import '../collections_controller/collections_controller.dart';
+import '../../services/bag_design_service.dart';
 
 /// YourDesignController - Manages state and logic for Your Design screen
 /// Follows OOP principles with encapsulation and separation of concerns
 class YourDesignController extends GetxController {
-  // Private constructor to enforce singleton pattern
-  YourDesignController._();
-  
-  // Singleton instance
-  static final YourDesignController _instance = YourDesignController._();
-  
-  // Factory constructor returns singleton instance
-  factory YourDesignController() => _instance;
+  YourDesignController();
+
+  final TextEditingController searchTextController = TextEditingController();
+
+  static const Map<String, String> _bagTypeDisplayNames = {
+    'gusset_fullwrap': 'Gusset Full Bag',
+    'gusset_label': 'Gusset Label Bag',
+    'foil_fullwrap': 'Foil Full Bag',
+    'foil_label': 'Foil Label Bag',
+    'quad_fullwrap': 'Quad Full Bag',
+    'quad_label': 'Quad Label Bag',
+  };
 
   // Observable state variables
   final RxBool _isLoading = false.obs;
@@ -29,57 +36,75 @@ class YourDesignController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _initializeProjects();
+    resetState();
+    refresh();
   }
 
   @override
   void onClose() {
+    searchTextController.dispose();
     debugPrint('YourDesignController disposed');
     super.onClose();
   }
 
-  /// Initializes sample projects with the 6 generic images
-  void _initializeProjects() {
-    _projects.value = [
-      DesignProject(
-        id: '1',
-        title: 'Untitled Design',
-        imagePath: 'assets/images/image_first.png',
-        isPrivate: true,
-        category: 'Whiteboard',
-      ),
-      DesignProject(
-        id: '2',
-        title: 'Coffee Bag Design',
-        imagePath: 'assets/images/image_second.png',
-        isPrivate: true,
-      ),
-      DesignProject(
-        id: '3',
-        title: 'AI Coffee Bag Design',
-        imagePath: 'assets/images/image_third.png',
-        isPrivate: true,
-      ),
-      DesignProject(
-        id: '4',
-        title: 'Coffee Bag Design',
-        imagePath: 'assets/images/image_fourth.png',
-        isPrivate: true,
-      ),
-      DesignProject(
-        id: '5',
-        title: 'AI Coffee Bag Design',
-        imagePath: 'assets/images/image_fiveth.png',
-        isPrivate: true,
-      ),
-      DesignProject(
-        id: '6',
-        title: 'Coffee Bag Design',
-        imagePath: 'assets/images/image_six.png',
-        isPrivate: true,
-      ),
-    ];
-    _filteredProjects.value = _projects;
+  /// Clears all in-memory projects so old account data never leaks to another user.
+  void resetState() {
+    searchTextController.clear();
+    _projects.clear();
+    _filteredProjects.clear();
+    _searchQuery.value = '';
+    _isLoading.value = false;
+  }
+
+  void _syncFilteredProjects() {
+    final query = _normalizeForSearch(_searchQuery.value);
+    if (query.isEmpty) {
+      _filteredProjects
+        ..clear()
+        ..addAll(_projects);
+      return;
+    }
+
+    _filteredProjects
+      ..clear()
+      ..addAll(
+        _projects.where(
+          (project) {
+            final rawTitle = _normalizeForSearch(project.title);
+            final displayTitle = _normalizeForSearch(
+              _resolveBagTypeDisplayName(project.title),
+            );
+            return rawTitle.contains(query) || displayTitle.contains(query);
+          },
+        ),
+      );
+  }
+
+  String _resolveBagTypeDisplayName(String bagTypeId) {
+    final normalized = bagTypeId.trim().toLowerCase();
+    return _bagTypeDisplayNames[normalized] ?? bagTypeId;
+  }
+
+  String _normalizeForSearch(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll('_', ' ')
+        .replaceAll('-', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  String _resolveDesignImagePath({
+    required String logoUrl,
+    required String previewUrl,
+  }) {
+    final logo = logoUrl.trim();
+    if (logo.isNotEmpty) return logo;
+
+    final preview = previewUrl.trim();
+    if (preview.isNotEmpty) return preview;
+
+    return '';
   }
 
   /// Toggles between grid and list view
@@ -91,51 +116,21 @@ class YourDesignController extends GetxController {
   /// Updates search query and filters projects
   void updateSearchQuery(String query) {
     _searchQuery.value = query;
-    if (query.isEmpty) {
-      _filteredProjects.value = _projects;
-    } else {
-      _filteredProjects.value = _projects
-          .where((project) =>
-              project.title.toLowerCase().contains(query.toLowerCase()))
-          .toList();
-    }
+    _syncFilteredProjects();
     debugPrint('Search query updated: $query, Found ${_filteredProjects.length} projects');
   }
 
-  /// Shows popup menu for a project (Download/Delete)
+  /// Clears search input and immediately restores full design list.
+  void clearSearchQuery() {
+    searchTextController.clear();
+    _searchQuery.value = '';
+    _syncFilteredProjects();
+  }
+
+  /// Shows popup menu for a project
   void showProjectOptions(BuildContext context, DesignProject project) {
     debugPrint('Showing options for project: ${project.title}');
     // This will be handled by the UI with PopupMenuButton
-  }
-
-  /// Downloads a project
-  Future<void> downloadProject(DesignProject project) async {
-    debugPrint('Downloading project: ${project.title}');
-    _isLoading.value = true;
-    
-    try {
-      // Simulate download delay
-      await Future.delayed(const Duration(seconds: 2));
-      
-      Get.snackbar(
-        'Success',
-        'Project "${project.title}" downloaded successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF009966),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to download project',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
   }
 
   /// Deletes a project
@@ -144,28 +139,26 @@ class YourDesignController extends GetxController {
     _isLoading.value = true;
     
     try {
-      // Simulate delete delay
-      await Future.delayed(const Duration(seconds: 1));
+      final response = await BagDesignService.instance
+          .deleteCollectionDesignById(project.id);
+
+      if (!response.success) {
+        if (!_isSilentAuthError(response.errorMessage, response.statusCode)) {
+          _showErrorToast(response.errorMessage ?? 'Failed to delete project');
+        }
+        return;
+      }
       
       _projects.removeWhere((p) => p.id == project.id);
-      _filteredProjects.removeWhere((p) => p.id == project.id);
+      _syncFilteredProjects();
+
+      if (Get.isRegistered<CollectionsController>()) {
+        Get.find<CollectionsController>().removeCollectionDesignById(project.id);
+      }
       
-      Get.snackbar(
-        'Success',
-        'Project "${project.title}" deleted successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF009966),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
+      _showSuccessToast('Project "${project.title}" deleted successfully');
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to delete project',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      _showErrorToast('Failed to delete project');
     } finally {
       _isLoading.value = false;
     }
@@ -174,12 +167,7 @@ class YourDesignController extends GetxController {
   /// Opens a project for editing
   void openProject(DesignProject project) {
     debugPrint('Opening project: ${project.title}');
-    Get.snackbar(
-      'Opening Project',
-      project.title,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
-    );
+    _showInfoToast(project.title);
   }
 
   /// Refreshes the projects list
@@ -187,11 +175,37 @@ class YourDesignController extends GetxController {
   Future<void> refresh() async {
     debugPrint('Refreshing projects...');
     _isLoading.value = true;
-    
+
     try {
-      // Simulate refresh delay
-      await Future.delayed(const Duration(seconds: 1));
-      _initializeProjects();
+      final response = await BagDesignService.instance.getSavedDesigns();
+
+      if (response.success && response.data != null) {
+        final loadedProjects = response.data!
+            .map(
+              (item) => DesignProject(
+                id: item.id.toString(),
+                title: item.bagType,
+                imagePath: _resolveDesignImagePath(
+                  logoUrl: item.logoUrl,
+                  previewUrl: item.previewUrl,
+                ),
+                isPrivate: true,
+                category: 'AI Generated',
+                lastModified: DateTime.tryParse(item.createdAt),
+              ),
+            )
+            .toList();
+
+        _projects
+          ..clear()
+          ..addAll(loadedProjects);
+        _syncFilteredProjects();
+      } else {
+        resetState();
+        if (!_isSilentAuthError(response.errorMessage, response.statusCode)) {
+          _showErrorToast(response.errorMessage ?? 'Failed to load your designs');
+        }
+      }
     } finally {
       _isLoading.value = false;
     }
@@ -213,9 +227,99 @@ class YourDesignController extends GetxController {
     
     // Add to the beginning of the list
     _projects.insert(0, newProject);
-    _filteredProjects.insert(0, newProject);
+    _syncFilteredProjects();
     
     // Success message will be shown in UI layer with custom snackbar
+  }
+
+  /// Saves the generated design to collection using API
+  Future<bool> saveDesignToCollection(String previewId) async {
+    debugPrint('🔄 YourDesignController: saveDesignToCollection called with previewId: $previewId');
+    _isLoading.value = true;
+    try {
+      final response = await BagDesignService.instance.saveDesignToCollection(previewId);
+      
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        debugPrint('✅ Design saved successfully: ${data.bagType}');
+        
+        // Add to projects list
+        final newProject = DesignProject(
+          id: data.id.toString(),
+          title: data.bagType,
+          imagePath: _resolveDesignImagePath(
+            logoUrl: data.logoUrl,
+            previewUrl: data.previewUrl,
+          ),
+          isPrivate: true,
+          category: 'AI Generated',
+          lastModified: DateTime.tryParse(data.createdAt),
+        );
+
+        _projects.removeWhere((item) => item.id == newProject.id);
+        _projects.insert(0, newProject);
+        _syncFilteredProjects();
+        debugPrint('✅ Project added to list. Total projects: ${_projects.length}');
+        
+        _showSuccessToast('Design saved to your collection');
+        return true;
+      } else {
+        debugPrint('❌ Failed to save design: ${response.errorMessage}');
+        if (!_isSilentAuthError(response.errorMessage, response.statusCode)) {
+          _showErrorToast(response.errorMessage ?? 'Failed to save design');
+        }
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Error in saveDesignToCollection: $e');
+      _showErrorToast('An error occurred: $e');
+      return false;
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  void _showSuccessToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF009966),
+      textColor: Colors.white,
+      fontSize: 14.0,
+    );
+  }
+
+  void _showErrorToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFFF44336),
+      textColor: Colors.white,
+      fontSize: 14.0,
+    );
+  }
+
+  void _showInfoToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF2196F3),
+      textColor: Colors.white,
+      fontSize: 14.0,
+    );
+  }
+
+  bool _isSilentAuthError(String? message, int? statusCode) {
+    if (statusCode == 401 || statusCode == 403) return true;
+    final text = (message ?? '').toLowerCase();
+    return text.contains('authentication required') ||
+        text.contains('authentication failed') ||
+        text.contains('please login') ||
+        text.contains('please log in') ||
+        text.contains('unauthorized');
   }
 }
 

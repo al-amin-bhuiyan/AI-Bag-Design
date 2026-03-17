@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../routes/app_path.dart';
+import '../../services/auth_service.dart';
 
 /// SignUpController manages sign up screen logic and state
 /// Follows OOP principles with encapsulation and single responsibility
@@ -20,33 +21,30 @@ class SignUpController extends GetxController {
   final RxBool _obscurePassword = true.obs;
   final RxBool _obscureConfirmPassword = true.obs;
 
+  // Dependency
+  final AuthService _authService = AuthService.instance;
+
   // Getters
   bool get isLoading => _isLoading.value;
   bool get agreeToTerms => _agreeToTerms.value;
   bool get obscurePassword => _obscurePassword.value;
   bool get obscureConfirmPassword => _obscureConfirmPassword.value;
-  
+
   // Field value getters
-  String get fullName => fullNameController.text;
-  String get email => emailController.text;
+  String get fullName => fullNameController.text.trim();
+  String get email => emailController.text.trim();
   String get password => passwordController.text;
   String get confirmPassword => confirmPasswordController.text;
 
   @override
   void onInit() {
     super.onInit();
-    _initializeController();
   }
 
   @override
   void onClose() {
     _disposeControllers();
     super.onClose();
-  }
-
-  /// Initializes the controller
-  void _initializeController() {
-    // Any initialization logic
   }
 
   /// Disposes text editing controllers
@@ -74,28 +72,24 @@ class SignUpController extends GetxController {
 
   /// Validates full name
   String? validateFullName(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Full name is required';
     }
-    
-    if (value.length < 2) {
+    if (value.trim().length < 2) {
       return 'Full name must be at least 2 characters';
     }
-    
     return null;
   }
 
   /// Validates email format
   String? validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
+    if (value == null || value.trim().isEmpty) {
       return 'Email is required';
     }
-    
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
+    final emailRegex = RegExp(r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value.trim())) {
       return 'Please enter a valid email';
     }
-    
     return null;
   }
 
@@ -104,16 +98,18 @@ class SignUpController extends GetxController {
     if (value == null || value.isEmpty) {
       return 'Password is required';
     }
-    
     if (value.length < 8) {
       return 'Password must be at least 8 characters';
     }
-    
-    // Check for at least one uppercase, one lowercase, and one number
-    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
-      return 'Password must contain uppercase, lowercase, and number';
+    if (!value.contains(RegExp(r'[A-Z]'))) {
+      return 'Password must contain at least one uppercase letter';
     }
-    
+    if (!value.contains(RegExp(r'[a-z]'))) {
+      return 'Password must contain at least one lowercase letter';
+    }
+    if (!value.contains(RegExp(r'[0-9]'))) {
+      return 'Password must contain at least one number';
+    }
     return null;
   }
 
@@ -122,126 +118,81 @@ class SignUpController extends GetxController {
     if (value == null || value.isEmpty) {
       return 'Please confirm your password';
     }
-    
     if (value != password) {
       return 'Passwords do not match';
     }
-    
     return null;
   }
 
-  /// Validates all fields
-  bool validateFields() {
-    debugPrint('🔍 Starting field validation...');
-    
+  /// Validates all fields and shows toast on error
+  bool _validateFields() {
     final nameError = validateFullName(fullName);
-    final emailError = validateEmail(email);
-    final passwordError = validatePassword(password);
-    final confirmPasswordError = validateConfirmPassword(confirmPassword);
-    
     if (nameError != null) {
-      debugPrint('❌ Name validation failed: $nameError');
       _showError(nameError);
       return false;
     }
-    
+
+    final emailError = validateEmail(email);
     if (emailError != null) {
-      debugPrint('❌ Email validation failed: $emailError');
       _showError(emailError);
       return false;
     }
-    
+
+    final passwordError = validatePassword(password);
     if (passwordError != null) {
-      debugPrint('❌ Password validation failed: $passwordError');
       _showError(passwordError);
       return false;
     }
-    
-    if (confirmPasswordError != null) {
-      debugPrint('❌ Confirm password validation failed: $confirmPasswordError');
-      _showError(confirmPasswordError);
+
+    final confirmError = validateConfirmPassword(confirmPassword);
+    if (confirmError != null) {
+      _showError(confirmError);
       return false;
     }
-    
+
     if (!_agreeToTerms.value) {
-      debugPrint('❌ Terms not agreed');
       _showError('Please agree to terms and privacy policy');
       return false;
     }
-    
-    debugPrint('✅ All validations passed!');
+
     return true;
   }
 
-  /// Shows error message
-  void _showError(String message) {
-    Fluttertoast.showToast(
-      msg: message,
-      toastLength: Toast.LENGTH_LONG,
-      gravity: ToastGravity.BOTTOM,
-      timeInSecForIosWeb: 2,
-      backgroundColor: const Color(0xFFF44336),
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
-  }
-
-  /// Shows success message
-  void _showSuccess(String message) {
-    Fluttertoast.showToast(
-      msg: message,
-      toastLength: Toast.LENGTH_LONG,
-      gravity: ToastGravity.BOTTOM,
-      timeInSecForIosWeb: 2,
-      backgroundColor: const Color(0xFF4CAF50),
-      textColor: Colors.white,
-      fontSize: 16.0,
-    );
-  }
-
-  /// Handles sign up action
+  /// Handles sign up action - calls real API
   Future<void> signUp(BuildContext context) async {
-    debugPrint('========================================');
-    debugPrint('🚀 Sign up button pressed!');
-    debugPrint('Full Name: ${fullNameController.text}');
-    debugPrint('Email: ${emailController.text}');
-    debugPrint('Password: ${passwordController.text}');
-    debugPrint('Confirm Password: ${confirmPasswordController.text}');
-    debugPrint('Agree to Terms: $_agreeToTerms');
-    debugPrint('========================================');
-    
-    if (!validateFields()) {
-      debugPrint('❌ Validation FAILED - Stopping signup process');
-      return;
-    }
-    
-    debugPrint('✅ Validation PASSED - Proceeding with signup');
-    
+    debugPrint('🚀 signUp() called');
+
+    if (!_validateFields()) return;
+
+    _isLoading.value = true;
+
     try {
-      _isLoading.value = true;
-      
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      // TODO: Implement actual sign up logic
-      debugPrint('========================================');
-      debugPrint('✅ Signing up with:');
-      debugPrint('Name: $fullName');
-      debugPrint('Email: $email');
-      debugPrint('Password: $password');
-      debugPrint('========================================');
-      
-      _showSuccess('Registration successful!');
-      
-      // Navigate to sign in screen after successful registration
-      if (context.mounted) {
-        debugPrint('🔄 Navigating to login screen...');
-        context.push(AppPath.create);
+      final response = await _authService.register(
+        name: fullName,
+        email: email,
+        password: password,
+        password2: confirmPassword,
+      );
+
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        debugPrint('✅ Registration successful: ${data.email}');
+        _showSuccess(data.message.isNotEmpty
+            ? data.message
+            : 'Registration successful! Please verify your email.');
+
+        // Navigate to OTP verification screen (signup flow)
+        if (context.mounted) {
+          context.push(
+            '${AppPath.verificationCodefromsignup}?email=${Uri.encodeComponent(email)}',
+          );
+        }
+      } else {
+        _showError(response.errorMessage ?? 'Registration failed. Please try again.');
       }
-      
     } catch (e) {
-      debugPrint('❌ Error during signup: ${e.toString()}');
-      _showError('Registration failed: ${e.toString()}');
+      debugPrint('❌ SignUp error: $e');
+      _showError('Registration failed. Please try again.');
     } finally {
       _isLoading.value = false;
     }
@@ -249,54 +200,12 @@ class SignUpController extends GetxController {
 
   /// Handles sign up with Google
   Future<void> signUpWithGoogle() async {
-    try {
-      _isLoading.value = true;
-      
-      // TODO: Implement Google sign up
-      await Future.delayed(const Duration(seconds: 1));
-      debugPrint('Signing up with Google');
-      
-      Fluttertoast.showToast(
-        msg: 'Google sign up coming soon!',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: const Color(0xFF2196F3),
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
-      
-    } catch (e) {
-      _showError('Google sign up failed: ${e.toString()}');
-    } finally {
-      _isLoading.value = false;
-    }
+    _showInfo('Google sign up coming soon!');
   }
 
   /// Handles sign up with Apple
   Future<void> signUpWithApple() async {
-    try {
-      _isLoading.value = true;
-      
-      // TODO: Implement Apple sign up
-      await Future.delayed(const Duration(seconds: 1));
-      debugPrint('Signing up with Apple');
-      
-      Fluttertoast.showToast(
-        msg: 'Apple sign up coming soon!',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: const Color(0xFF000000),
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
-      
-    } catch (e) {
-      _showError('Apple sign up failed: ${e.toString()}');
-    } finally {
-      _isLoading.value = false;
-    }
+    _showInfo('Apple sign up coming soon!');
   }
 
   /// Navigates to sign in screen
@@ -304,33 +213,43 @@ class SignUpController extends GetxController {
     context.go(AppPath.login);
   }
 
-  /// Shows terms and privacy dialog
-  void showTermsAndPrivacy() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Terms and Privacy'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'Terms and Privacy Policy\n\n'
-            'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '
-            'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.\n\n'
-            'Please read and accept our terms to continue.',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Close'),
-          ),
-          TextButton(
-            onPressed: () {
-              toggleAgreeToTerms();
-              Get.back();
-            },
-            child: const Text('Accept'),
-          ),
-        ],
-      ),
+  /// Navigates to Terms and Conditions page
+  void showTermsAndPrivacy(BuildContext context) {
+    context.push(AppPath.termsAndConditions);
+  }
+
+  // ─── Toast Helpers ────────────────────────────────────────────────────────
+
+  void _showError(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFFF44336),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
+  }
+
+  void _showSuccess(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF4CAF50),
+      textColor: Colors.white,
+      fontSize: 15.0,
+    );
+  }
+
+  void _showInfo(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: const Color(0xFF2196F3),
+      textColor: Colors.white,
+      fontSize: 15.0,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../../controllers/verification_code_controller/verification_code_controller.dart';
 import '../../widgets/custom_back_button.dart';
+import '../../widgets/custom_button.dart';
 import '../../utils/app_fonts.dart';
 
 /// VerificationCodeScreen - Email verification code entry screen
@@ -455,46 +456,48 @@ class _VerifyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() => GestureDetector(
-          onTap: controller.isLoading
-              ? null
-              : () => controller.verifyCode(context),
-          child: Container(
-            width: 350.w,
-            height: 52.h,
-            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-            decoration: ShapeDecoration(
-              color: const Color(0xFF1F7CD5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (controller.isLoading)
-                  SizedBox(
-                    width: 20.w,
-                    height: 20.h,
-                    child: const CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                else
-                  Text(
-                    'Verify',
-                    style: AppFonts.poppinsRegular(
-                      fontSize: 16.sp,
-                      color: Colors.white,
-                    ).copyWith(height: 1.50),
-                  ),
-              ],
-            ),
+    return Obx(() => CircleFadeAnimation(
+      onPressed: controller.isLoading
+          ? null
+          : () => controller.verifyCode(context),
+      borderRadius: BorderRadius.circular(8.r),
+      splashColor: Colors.white,
+      child: Container(
+        width: 350.w,
+        height: 52.h,
+        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+        decoration: ShapeDecoration(
+          color: const Color(0xFF1F7CD5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.r),
           ),
-        ));
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            if (controller.isLoading)
+              SizedBox(
+                width: 20.w,
+                height: 20.h,
+                child: const CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            else
+              Text(
+                'Verify',
+                style: AppFonts.poppinsRegular(
+                  fontSize: 16.sp,
+                  color: Colors.white,
+                ).copyWith(height: 1.50),
+              ),
+          ],
+        ),
+      ),
+    ));
   }
 }
 

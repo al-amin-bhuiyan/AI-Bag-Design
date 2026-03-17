@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../../routes/app_path.dart';
 
 /// ResetSuccessController manages reset success screen logic and state
@@ -45,7 +46,7 @@ class ResetSuccessController extends GetxController {
   /// Navigates back to previous screen
   void navigateBack(BuildContext context) {
     if (context.mounted) {
-      context.go(AppPath.login);
+      context.go(AppPath.create);
     }
   }
 
@@ -56,11 +57,14 @@ class ResetSuccessController extends GetxController {
 
   /// Shows a message to the user
   void _showMessage(String message) {
-    Get.snackbar(
-      'Info',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 3),
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 2,
+      backgroundColor: const Color(0xFFF44336),
+      textColor: Colors.white,
+      fontSize: 16.0,
     );
   }
 }

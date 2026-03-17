@@ -259,13 +259,13 @@ class _ResultContent extends StatelessWidget {
                 ),
               ),
             ),
-            GestureDetector(
-              onTap: onClose,
-              child: Icon(
-                Icons.close,
-                size: 24.sp,
-                color: const Color(0xFF0F0F0F),
-              ),
+            CustomCloseButton(
+              onPressed: onClose,
+              backgroundColor: Colors.transparent,
+              iconColor: const Color(0xFF0F0F0F),
+              iconSize: 24.sp,
+              size: 32.w,
+              splashColor: Colors.black,
             ),
           ],
         ),

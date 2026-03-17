@@ -17,7 +17,10 @@ class EditProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(EditProfileController());
+    // Use Get.find() — controller is already registered in Binding via lazyPut.
+    // Get.put() would create a NEW orphaned instance on every build,
+    // causing onInit() to not fire correctly and the API to never be called.
+    final controller = Get.find<EditProfileController>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -207,36 +210,71 @@ class _ProfilePhotoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Profile Image
-        Obx(() => GestureDetector(
-          onTap: () => controller.showPhotoOptions(context),
-          child: Container(
-            width: 70.w,
-            height: 70.h,
-            clipBehavior: Clip.antiAlias,
-            decoration: ShapeDecoration(
-              shape: RoundedRectangleBorder(
-                side: BorderSide(
-                  width: 1,
+        // Profile Image — tappable avatar
+        // All observables read directly inside Obx builder scope
+        Obx(() {
+          final localPath = controller.profileImagePath.value;
+          final networkUrl = controller.networkImageUrl.value;
+
+          Widget imageChild;
+
+          // Priority 1 — local file selected by user
+          if (localPath.isNotEmpty) {
+            imageChild = Image.file(
+              File(localPath),
+              fit: BoxFit.cover,
+            );
+          }
+          // Priority 2 — network image from API
+          else if (networkUrl.isNotEmpty) {
+            imageChild = Image.network(
+              networkUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return Container(
                   color: const Color(0xFFF2F4F6),
-                ),
-                borderRadius: BorderRadius.circular(35.r),
-              ),
-            ),
-            child: controller.profileImagePath.value.isNotEmpty
-                ? Image.file(
-                    File(controller.profileImagePath.value),
-                    fit: BoxFit.cover,
-                  )
-                : Image.asset(
-                    CustomAssets.personimage,
-                    fit: BoxFit.cover,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF1F7CD5),
+                    ),
                   ),
-          ),
-        )),
-        
+                );
+              },
+              errorBuilder: (context, error, stackTrace) => Image.asset(
+                CustomAssets.personimage,
+                fit: BoxFit.cover,
+              ),
+            );
+          }
+          // Priority 3 — default asset placeholder
+          else {
+            imageChild = Image.asset(
+              CustomAssets.personimage,
+              fit: BoxFit.cover,
+            );
+          }
+
+          return GestureDetector(
+            onTap: () => controller.showPhotoOptions(context),
+            child: Container(
+              width: 70.w,
+              height: 70.h,
+              clipBehavior: Clip.antiAlias,
+              decoration: ShapeDecoration(
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(width: 1, color: Color(0xFFF2F4F6)),
+                  borderRadius: BorderRadius.circular(35.r),
+                ),
+              ),
+              child: imageChild,
+            ),
+          );
+        }),
+
         SizedBox(height: 12.h),
-        
+
         // Edit Photo Button
         GestureDetector(
           onTap: () => controller.showPhotoOptions(context),

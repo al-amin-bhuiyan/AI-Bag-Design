@@ -19,8 +19,15 @@ class Profile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize controller
-    final controller = Get.find<ProfileController>();
+    // Ensure controller is registered and always fetch fresh profile
+    final controller = Get.isRegistered<ProfileController>()
+        ? Get.find<ProfileController>()
+        : Get.put(ProfileController());
+
+    // When the Profile screen is opened, always refresh from API
+    // so that name, email, and image are driven ONLY by the
+    // GET /accounts/user/profile/ endpoint.
+    controller.refreshProfile();
 
     final content = SafeArea(
       child: Column(
@@ -620,4 +627,3 @@ class _LogoutButton extends StatelessWidget {
     );
   }
 }
-

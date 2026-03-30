@@ -156,7 +156,7 @@ class YourDesignController extends GetxController {
         Get.find<CollectionsController>().removeCollectionDesignById(project.id);
       }
       
-      _showSuccessToast('Project "${project.title}" deleted successfully');
+      _showSuccessToast(' deleted successfully');
     } catch (e) {
       _showErrorToast('Failed to delete project');
     } finally {

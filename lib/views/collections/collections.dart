@@ -65,16 +65,16 @@ class CollectionsScreen extends StatelessWidget {
   }
 
   void _handleNavigation(
-    BuildContext context,
-    int index,
-    CollectionsController controller,
-  ) {
+      BuildContext context,
+      int index,
+      CollectionsController controller,
+      ) {
     switch (index) {
       case 0:
         context.go(AppPath.create);
         break;
       case 1:
-        // Re-hit GET /api/collections/ when collections tab is tapped.
+      // Re-hit GET /api/collections/ when collections tab is tapped.
         controller.refresh();
         break;
       case 2:
@@ -132,9 +132,6 @@ class _CollectionCard extends StatefulWidget {
 }
 
 class _CollectionCardState extends State<_CollectionCard> {
-  String _previewImageUrl = '';
-  String _dielineImageUrl = '';
-  String _logoImageUrl = '';
   List<String> _sliderImageUrls = <String>[];
   int _currentImageIndex = 0;
 
@@ -150,6 +147,7 @@ class _CollectionCardState extends State<_CollectionCard> {
   @override
   void initState() {
     super.initState();
+    debugPrint('[_CollectionCardState] initState for item id=${widget.item.id}');
     _syncImageStateFromItem();
   }
 
@@ -158,29 +156,31 @@ class _CollectionCardState extends State<_CollectionCard> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.item.id != widget.item.id ||
         oldWidget.item.previewUrl != widget.item.previewUrl ||
-        oldWidget.item.dielineUrl != widget.item.dielineUrl ||
-        oldWidget.item.logoUrl != widget.item.logoUrl) {
+        oldWidget.item.dielineUrl != widget.item.dielineUrl) {
+      debugPrint('[_CollectionCardState] didUpdateWidget id=${widget.item.id}');
+      debugPrint('  old.previewUrl=${oldWidget.item.previewUrl}');
+      debugPrint('  new.previewUrl=${widget.item.previewUrl}');
+      debugPrint('  old.dielineUrl=${oldWidget.item.dielineUrl}');
+      debugPrint('  new.dielineUrl=${widget.item.dielineUrl}');
       _syncImageStateFromItem();
     }
   }
 
   void _syncImageStateFromItem() {
-    _previewImageUrl = _resolveImageUrl(widget.item.previewUrl);
-    _dielineImageUrl = _resolveImageUrl(widget.item.dielineUrl);
-    _logoImageUrl = _resolveImageUrl(widget.item.logoUrl);
+    debugPrint('[_CollectionCardState] _syncImageStateFromItem id=${widget.item.id}');
+    debugPrint('  raw.previewUrl=${widget.item.previewUrl}');
+    debugPrint('  raw.dielineUrl=${widget.item.dielineUrl}');
 
     final orderedUniqueUrls = <String>[];
-    for (final url in <String>[_previewImageUrl, _dielineImageUrl]) {
-      if (url.isNotEmpty && !orderedUniqueUrls.contains(url)) {
-        orderedUniqueUrls.add(url);
+    for (final rawUrl in widget.item.sliderImageUrls) {
+      final resolved = _resolveImageUrl(rawUrl);
+      if (resolved.isNotEmpty && !orderedUniqueUrls.contains(resolved)) {
+        orderedUniqueUrls.add(resolved);
       }
     }
 
-    if (orderedUniqueUrls.isEmpty && _logoImageUrl.isNotEmpty) {
-      orderedUniqueUrls.add(_logoImageUrl);
-    }
-
     _sliderImageUrls = orderedUniqueUrls;
+    debugPrint('  _sliderImageUrls=$_sliderImageUrls');
     if (_currentImageIndex >= _sliderImageUrls.length) {
       _currentImageIndex = 0;
     }
@@ -189,6 +189,7 @@ class _CollectionCardState extends State<_CollectionCard> {
   @override
   Widget build(BuildContext context) {
     final bagDisplayName = _getBagDisplayName(widget.item.bagType);
+    debugPrint('[_CollectionCardState] build id=${widget.item.id} sliderUrls=$_sliderImageUrls currentIndex=$_currentImageIndex');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -199,7 +200,6 @@ class _CollectionCardState extends State<_CollectionCard> {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8.r),
-            // color: const Color(0xFFF5F5F5),
           ),
           child: _buildImageSlider(),
         ),
@@ -239,10 +239,13 @@ class _CollectionCardState extends State<_CollectionCard> {
   String _resolveImageUrl(String url) {
     if (url.isEmpty) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return '${AppConstants.baseUrl}${url.startsWith('/') ? '' : '/'}$url';
+    final resolved = '${AppConstants.baseUrl}${url.startsWith('/') ? '' : '/'}$url';
+    debugPrint('[_CollectionCardState] _resolveImageUrl input=$url resolved=$resolved');
+    return resolved;
   }
 
   Widget _buildImageSlider() {
+    debugPrint('[_CollectionCardState] _buildImageSlider id=${widget.item.id} urls=$_sliderImageUrls');
     if (_sliderImageUrls.isEmpty) {
       return const Icon(Icons.image_not_supported_outlined);
     }
@@ -254,6 +257,7 @@ class _CollectionCardState extends State<_CollectionCard> {
     return CarouselSlider.builder(
       itemCount: _sliderImageUrls.length,
       itemBuilder: (context, index, realIndex) {
+        debugPrint('[_CollectionCardState] Carousel item index=$index url=${_sliderImageUrls[index]}');
         return _buildNetworkImage(_sliderImageUrls[index], imageIndex: index);
       },
       options: CarouselOptions(
@@ -263,6 +267,7 @@ class _CollectionCardState extends State<_CollectionCard> {
         enableInfiniteScroll: false,
         onPageChanged: (index, reason) {
           if (!mounted) return;
+          debugPrint('[_CollectionCardState] onPageChanged index=$index reason=$reason');
           setState(() {
             _currentImageIndex = index;
           });
@@ -272,28 +277,19 @@ class _CollectionCardState extends State<_CollectionCard> {
   }
 
   Widget _buildNetworkImage(String url, {required int imageIndex}) {
+    debugPrint('[_CollectionCardState] _buildNetworkImage index=$imageIndex url=$url');
     return GestureDetector(
-      onTap: () => _openZoomGallery(imageIndex),
+      onTap: () {
+        debugPrint('[_CollectionCardState] image tapped index=$imageIndex url=$url');
+        _openZoomGallery(imageIndex);
+      },
       child: Image.network(
         url,
         fit: BoxFit.contain,
         width: double.infinity,
         height: double.infinity,
         errorBuilder: (context, error, stackTrace) {
-          if (_logoImageUrl.isNotEmpty && url != _logoImageUrl) {
-            return GestureDetector(
-              onTap: () => _openZoomGallery(imageIndex),
-              child: Image.network(
-                _logoImageUrl,
-                fit: BoxFit.contain,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.broken_image_outlined);
-                },
-              ),
-            );
-          }
+          debugPrint('[_CollectionCardState] Image.network error at index=$imageIndex url=$url error=$error');
           return const Icon(Icons.broken_image_outlined);
         },
       ),
@@ -301,7 +297,12 @@ class _CollectionCardState extends State<_CollectionCard> {
   }
 
   void _openZoomGallery(int initialIndex) {
-    if (_sliderImageUrls.isEmpty) return;
+    if (_sliderImageUrls.isEmpty) {
+      debugPrint('[_CollectionCardState] _openZoomGallery called with empty _sliderImageUrls');
+      return;
+    }
+
+    debugPrint('[_CollectionCardState] _openZoomGallery initialIndex=$initialIndex urls=$_sliderImageUrls');
 
     showDialog<void>(
       context: context,
@@ -312,7 +313,8 @@ class _CollectionCardState extends State<_CollectionCard> {
         child: _CollectionZoomGallery(
           imageUrls: _sliderImageUrls,
           initialIndex: initialIndex,
-          fallbackUrl: _logoImageUrl,
+          fallbackUrl:
+              _sliderImageUrls.isNotEmpty ? _sliderImageUrls.first : '',
         ),
       ),
     );
@@ -358,6 +360,7 @@ class _CollectionZoomGalleryState extends State<_CollectionZoomGallery> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[_CollectionZoomGalleryState] build initialIndex=${widget.initialIndex} imageUrls=${widget.imageUrls}');
     return Stack(
       children: [
         PageView.builder(
@@ -365,12 +368,14 @@ class _CollectionZoomGalleryState extends State<_CollectionZoomGallery> {
           itemCount: widget.imageUrls.length,
           onPageChanged: (index) {
             if (!mounted) return;
+            debugPrint('[_CollectionZoomGalleryState] onPageChanged index=$index');
             setState(() {
               _currentIndex = index;
             });
           },
           itemBuilder: (context, index) {
             final imageUrl = widget.imageUrls[index];
+            debugPrint('[_CollectionZoomGalleryState] page index=$index url=$imageUrl');
             return _DoubleTapZoomableNetworkImage(
               imageUrl: imageUrl,
               fallbackUrl: widget.fallbackUrl,
@@ -425,7 +430,7 @@ class _DoubleTapZoomableNetworkImageState
   static const double _doubleTapScale = 2.5;
 
   final TransformationController _transformationController =
-      TransformationController();
+  TransformationController();
   TapDownDetails? _doubleTapDetails;
 
   @override
@@ -436,9 +441,11 @@ class _DoubleTapZoomableNetworkImageState
 
   void _handleDoubleTap() {
     final tapPosition = _doubleTapDetails?.localPosition;
+    debugPrint('[_DoubleTapZoomableNetworkImageState] _handleDoubleTap tapPosition=$tapPosition');
     if (tapPosition == null) return;
 
     final currentScale = _transformationController.value.getMaxScaleOnAxis();
+    debugPrint('[_DoubleTapZoomableNetworkImageState] currentScale=$currentScale');
     if (currentScale > _minScale) {
       _transformationController.value = Matrix4.identity();
       return;
@@ -446,6 +453,7 @@ class _DoubleTapZoomableNetworkImageState
 
     final dx = -tapPosition.dx * (_doubleTapScale - 1);
     final dy = -tapPosition.dy * (_doubleTapScale - 1);
+    debugPrint('[_DoubleTapZoomableNetworkImageState] applying translate dx=$dx dy=$dy scale=$_doubleTapScale');
     _transformationController.value = Matrix4.identity()
       ..translateByDouble(dx, dy, 0, 1)
       ..scaleByDouble(_doubleTapScale, _doubleTapScale, _doubleTapScale, 1);
@@ -453,7 +461,9 @@ class _DoubleTapZoomableNetworkImageState
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    debugPrint('[_DoubleTapZoomableNetworkImageState] build imageUrl=${widget.imageUrl} fallbackUrl=${widget.fallbackUrl}');
+    return GestureDetector
+      (
       onDoubleTapDown: (details) => _doubleTapDetails = details,
       onDoubleTap: _handleDoubleTap,
       child: InteractiveViewer(
@@ -465,12 +475,15 @@ class _DoubleTapZoomableNetworkImageState
             widget.imageUrl,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) {
+              debugPrint('[_DoubleTapZoomableNetworkImageState] Image.network error url=${widget.imageUrl} error=$error');
               if (widget.fallbackUrl.isNotEmpty &&
                   widget.imageUrl != widget.fallbackUrl) {
+                debugPrint('[_DoubleTapZoomableNetworkImageState] attempting fallbackUrl=${widget.fallbackUrl}');
                 return Image.network(
                   widget.fallbackUrl,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
+                    debugPrint('[_DoubleTapZoomableNetworkImageState] fallbackUrl also failed error=$error');
                     return const Icon(
                       Icons.broken_image_outlined,
                       color: Colors.white,

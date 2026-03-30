@@ -203,7 +203,7 @@ class _LoadingContentState extends State<_LoadingContent>
                         ),
                       ),
                       TextSpan(
-                        text: '10-20 seconds.',
+                        text: '1 to 2 minutes .',
                         style: AppFonts.interSemiBold(
                           fontSize: 16.sp,
                           color: const Color(0xFF0F0F0F),

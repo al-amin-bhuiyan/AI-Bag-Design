@@ -35,11 +35,47 @@ class SaveCollectionResponseModel {
       id: json['id'] as int? ?? 0,
       bagType: json['bag_type'] as String? ?? '',
       logoUrl: json['logo_url'] as String? ?? '',
-      previewUrl: json['preview_url'] as String? ?? '',
-      dielineUrl: json['dieline_url'] as String? ?? '',
+      previewUrl: _readImageUrl(
+        json,
+        keys: const <String>[
+          'preview_url',
+          'previewUrl',
+          'preview',
+          'front_url',
+          'frontUrl',
+          'front',
+          'image_url',
+          'imageUrl',
+          'image',
+        ],
+        preferredHints: const <String>['front', 'preview'],
+      ),
+      dielineUrl: _readImageUrl(
+        json,
+        keys: const <String>[
+          'dieline_url',
+          'dielineUrl',
+          'dieline',
+          'back_url',
+          'backUrl',
+          'back',
+        ],
+        preferredHints: const <String>['back', 'dieline'],
+      ),
       previewId: json['preview_id'] as String? ?? '',
       createdAt: json['created_at'] as String? ?? '',
     );
+  }
+
+  /// Slider images should only come from preview + dieline.
+  List<String> get sliderImageUrls {
+    final urls = <String>[];
+    for (final value in <String>[previewUrl.trim(), dielineUrl.trim()]) {
+      if (value.isNotEmpty && !urls.contains(value)) {
+        urls.add(value);
+      }
+    }
+    return urls;
   }
 
   /// Convert to JSON
@@ -58,4 +94,57 @@ class SaveCollectionResponseModel {
   @override
   String toString() =>
       'SaveCollectionResponseModel(id: $id, bagType: $bagType, logoUrl: $logoUrl, previewId: $previewId)';
+
+  static String _readImageUrl(
+    Map<String, dynamic> json, {
+    required List<String> keys,
+    required List<String> preferredHints,
+  }) {
+    final candidates = <String>[];
+
+    // Collect direct and nested URL values from preferred keys first.
+    for (final key in keys) {
+      _collectSupportedUrls(json[key], candidates);
+    }
+
+    // Fallback: collect any URL-like values from full payload.
+    _collectSupportedUrls(json, candidates);
+
+    if (candidates.isEmpty) return '';
+
+    for (final candidate in candidates) {
+      final normalized = candidate.toLowerCase();
+      for (final hint in preferredHints) {
+        if (normalized.contains(hint.toLowerCase())) {
+          return candidate;
+        }
+      }
+    }
+
+    return candidates.first;
+  }
+
+  static void _collectSupportedUrls(dynamic value, List<String> output) {
+    if (value is String) {
+      final normalized = value.trim();
+      if (normalized.isNotEmpty && !output.contains(normalized)) {
+        output.add(normalized);
+      }
+      return;
+    }
+
+    if (value is Map<String, dynamic>) {
+      for (final entry in value.entries) {
+        _collectSupportedUrls(entry.value, output);
+      }
+      return;
+    }
+
+    if (value is List) {
+      for (final item in value) {
+        _collectSupportedUrls(item, output);
+      }
+    }
+  }
+
 }

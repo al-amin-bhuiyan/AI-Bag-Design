@@ -276,13 +276,14 @@ class _TextInputField extends StatelessWidget {
   const _TextInputField({required this.controller});
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
       height: 182.h,
       padding: EdgeInsets.all(16.w),
       decoration: ShapeDecoration(
-        color: Colors.white.withValues(alpha: 0),
+        color: Colors.white.withOpacity(0),  // updated to withOpacity for correct alpha
         shape: RoundedRectangleBorder(
           side: BorderSide(
             width: 1.5,
@@ -298,7 +299,7 @@ class _TextInputField extends StatelessWidget {
             spreadRadius: -1,
           ),
           BoxShadow(
-            color:  Colors.white,
+            color: Colors.white,
             blurRadius: 3,
             offset: Offset(0, 1),
             spreadRadius: 0,
@@ -309,7 +310,8 @@ class _TextInputField extends StatelessWidget {
         controller: controller.textController,
         maxLines: null,
         expands: true,
-        textAlignVertical: TextAlignVertical.top,
+        textAlign: TextAlign.start,  // Added horizontal alignment
+        textAlignVertical: TextAlignVertical.top,  // Keeps text at the top vertically
         style: TextStyle(
           color: const Color(0xFF0F0F0F),
           fontSize: 16.sp,

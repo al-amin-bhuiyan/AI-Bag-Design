@@ -1,24 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
+import '../../routes/app_path.dart';
 
 /// TermsAndConditionsController manages terms & conditions screen logic and state
 /// Follows OOP principles with encapsulation and single responsibility
 class TermsAndConditionsController extends GetxController {
   // ============ OBSERVABLE PROPERTIES ============
   
-  /// List of expanded section indices
-  final RxList<int> _expandedIndices = <int>[].obs;
+  /// Page control state
+  final PageController pageController = PageController();
+  final RxInt currentPage = 0.obs;
   
   /// Loading state
   final RxBool _isLoading = false.obs;
   
+  /// Mode state
+  final RxBool isFromOnboarding = false.obs;
+  final RxList<int> _expandedIndices = <int>[].obs;
+  
   // ============ GETTERS ============
   
-  List<int> get expandedIndices => _expandedIndices;
   bool get isLoading => _isLoading.value;
-  
-  /// Checks if a specific section is expanded
+  bool get isLastPage => currentPage.value == termsSections.length - 1;
   bool isExpanded(int index) => _expandedIndices.contains(index);
   
   // ============ LIFECYCLE METHODS ============
@@ -31,7 +35,7 @@ class TermsAndConditionsController extends GetxController {
   
   @override
   void onClose() {
-    _cleanup();
+    pageController.dispose();
     super.onClose();
   }
   
@@ -39,6 +43,14 @@ class TermsAndConditionsController extends GetxController {
   
   /// Initializes the controller
   void _initialize() {
+    // Check if we arrived from onboarding via route parameters or arguments
+    final args = Get.arguments;
+    if (args is Map<String, dynamic> && args['onboarding'] == true) {
+      isFromOnboarding.value = true;
+    } else if (Get.parameters['onboarding'] == 'true') {
+      isFromOnboarding.value = true;
+    }
+    
     _loadTermsAndConditions();
   }
   
@@ -57,30 +69,41 @@ class TermsAndConditionsController extends GetxController {
   
   // ============ PUBLIC METHODS ============
   
-  /// Toggles section expansion state
+  void onPageChanged(int index) {
+    currentPage.value = index;
+  }
+
   void toggleSection(int index) {
     if (_expandedIndices.contains(index)) {
       _expandedIndices.remove(index);
-      print('🔵 Collapsed section at index: $index');
     } else {
       _expandedIndices.add(index);
-      print('🔵 Expanded section at index: $index');
     }
   }
-  
-  /// Expands all sections
-  void expandAll() {
-    _expandedIndices.clear();
-    for (int i = 0; i < _getTermsSections().length; i++) {
-      _expandedIndices.add(i);
+
+  void nextPage() {
+    if (currentPage.value < termsSections.length - 1) {
+      pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
-    print('✅ Expanded all sections');
   }
-  
-  /// Collapses all sections
-  void collapseAll() {
-    _expandedIndices.clear();
-    print('✅ Collapsed all sections');
+
+  void previousPage() {
+    if (currentPage.value > 0) {
+      pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void agreeAndContinue(BuildContext context) {
+    // Navigate to home/create after agreeing
+    if (context.mounted) {
+      context.go(AppPath.create);
+    }
   }
   
   /// Navigates back to previous screen
@@ -100,13 +123,13 @@ class TermsAndConditionsController extends GetxController {
   
   /// Handles errors
   void _handleError(String message) {
-    print('❌ Error: $message');
+    debugPrint('❌ Error: $message');
     _showMessage(message);
   }
   
   /// Cleanup resources
   void _cleanup() {
-    _expandedIndices.clear();
+    // No cleanup required for page states other than controller disposal
   }
   
   // ============ UTILITY METHODS ============
@@ -122,6 +145,7 @@ class TermsAndConditionsController extends GetxController {
   }
   
   /// Refreshes terms and conditions data
+  @override
   Future<void> refresh() async {
     await _loadTermsAndConditions();
   }

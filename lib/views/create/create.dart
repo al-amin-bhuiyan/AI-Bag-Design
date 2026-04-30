@@ -37,12 +37,12 @@ class CreateScreen extends StatelessWidget {
                 // Bag Type Options
                 _BagTypeOptions(controller: controller),
                 
-                SizedBox(height: 60.h),
+                SizedBox(height: 50.h),
                 
                 // Subtitle
                 _Subtitle(),
                 
-                SizedBox(height: 14.h),
+                SizedBox(height: 34.h),
                 
                 // Creation Options
                 _CreationOptions(controller: controller),
@@ -201,12 +201,12 @@ class _BagTypeCard extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 16.h),
                   Text(
                     title,
                     textAlign: TextAlign.center,
                     style: AppFonts.interSemiBold(
-                      fontSize: 24.sp,
+                      fontSize: 22.sp,
                       color: const Color(0xFF0F0F0F),
                     ),
                   ),

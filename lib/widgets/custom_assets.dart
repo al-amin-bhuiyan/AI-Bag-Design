@@ -18,6 +18,7 @@ class CustomAssets {
   // Logo Images
   static const String splashLogo = '$_imagesPath/splash_logo.png';
   static const String appIcon = '$_imagesPath/lOGOss.png';
+  static const String logoSs = '$_imagesPath/lOGOss.png';
 
   
   // Onboarding Images
@@ -99,6 +100,8 @@ class CustomAssets {
         mainBackground,
         splashBackground,
         splashLogo,
+        appIcon,
+        logoSs,
         
         // Onboarding
         onBoardingFirst,

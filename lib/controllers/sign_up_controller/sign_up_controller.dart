@@ -5,6 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../routes/app_path.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/dialogs/terms_and_privacy_dialog.dart';
 
 /// SignUpController manages sign up screen logic and state
 /// Follows OOP principles with encapsulation and single responsibility
@@ -213,12 +214,12 @@ class SignUpController extends GetxController {
     context.go(AppPath.login);
   }
 
-  /// Navigates to Terms and Conditions page
+  /// Shows Terms and Conditions as a popup dialog
   void showTermsAndPrivacy(BuildContext context) {
-    context.push(AppPath.termsAndConditions);
+    TermsAndPrivacyDialog.show(context);
   }
 
-  // ─── Toast Helpers ────────────────────────────────────────────────────────
+  // ============ Toast Helpers ============
 
   void _showError(String message) {
     Fluttertoast.showToast(

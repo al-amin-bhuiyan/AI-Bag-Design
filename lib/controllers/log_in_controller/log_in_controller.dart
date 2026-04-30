@@ -127,7 +127,7 @@ class LogInController extends GetxController {
         UserSessionService.instance.imageUrl.value =
             data.user.image.startsWith('http')
                 ? data.user.image
-                : 'http://10.10.7.74:8000${data.user.image}';
+                : 'http://18.233.192.169:8000${data.user.image}';
         UserSessionService.instance.isLoaded.value = true;
 
         // Mark auth state as authenticated

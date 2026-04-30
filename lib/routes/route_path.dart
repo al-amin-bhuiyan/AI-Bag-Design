@@ -288,7 +288,16 @@ class RoutePath {
     return GoRoute(
       path: AppPath.termsAndConditions,
       name: 'termsAndConditions',
-      builder: (context, state) => const TermsAndConditionsScreen(),
+      builder: (context, state) {
+        final onboardingStr = state.uri.queryParameters['onboarding'];
+        final isFromOnboarding = onboardingStr == 'true';
+        
+        // As we use GoRouter, we might need a way to pass this to the controller.
+        // It's cleaner to pass it to the Screen widget, but the controller uses GetX.
+        // We'll set it here via Get arguments if needed, but it's better to use Get.put with tag or just set it:
+        // Wait, `TermsAndConditionsScreen` doesn't take parameters right now.
+        return TermsAndConditionsScreen(isFromOnboarding: isFromOnboarding);
+      },
     );
   }
 }

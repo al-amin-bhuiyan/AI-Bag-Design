@@ -115,7 +115,7 @@ class _OnboardingContent extends StatelessWidget {
                 // Page Indicators
                 _PageIndicators(currentPage: currentPage),
 
-                SizedBox(height: 16.h),
+                SizedBox(height: 10.h),
 
                 // Next Button
                 Padding(
@@ -155,10 +155,10 @@ class _OnboardingPage1 extends StatelessWidget {
         // ✅ Text position relative to screen height (not fixed pixel)
         Positioned(
           left: 26.w,
-          top: screenHeight * 0.365,
+          top: screenHeight * 0.34,
           child: const _OnboardingText(
-            title: 'WELCOME TO SOESTERN!',
-            description: 'Create, Save and print custom labels\nwith ease.',
+            title: 'WELCOME TO SOESTERN PACKAGING!',
+            description: 'Create, Save and print custom full graphic printed bags\nwith ease.',
           ),
         ),
       ],
@@ -190,7 +190,7 @@ class _OnboardingPage2 extends StatelessWidget {
           child: const _OnboardingText(
             title: 'DESIGN YOUR LABEL OR FULLY PRINTED BAG INSTANTLY',
             description:
-                'Upload your logo or generate a design with AI — customize text, colors, and layout in just a few taps.',
+                'Create custom flexible packaging with just a handful of words or an uploaded images.',
           ),
         ),
       ],
@@ -222,7 +222,8 @@ class _OnboardingPage3 extends StatelessWidget {
           child: const _OnboardingText(
             title: 'PREVIEW.  SAVE.  DONE.',
             description:
-                'See your uploaded labels or custom printed mock up within seconds!',
+                'See your uploaded labels or custom printed mock up within seconds!'
+                    'Like the design you created? Contact our sales department to make your idea in to a reality!"',
           ),
         ),
       ],

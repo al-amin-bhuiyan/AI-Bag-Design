@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/text_to_design_controller/text_to_design_controller.dart';
+import '../../controllers/create_controller/create_controller.dart';
 import '../../utils/app_fonts.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_nav_bar_widgets.dart' show CustomNavBar;
@@ -348,7 +349,21 @@ class _CreateImageButton extends StatelessWidget {
       label: 'Create Image',
       onPressed: controller.isLoading.value
           ? null
-          : () => controller.generateDesign(context),
+          : () async {
+              // ─── Resolve bag_type from CreateController selection ─────────────────────
+              String bagType;
+              try {
+                final createController = Get.find<CreateController>();
+                bagType = createController.resolvedBagType;
+              } catch (_) {
+                bagType = 'gusset_fullwrap';
+              }
+              
+              print('🎒 Text To Design Button Clicked - Using bag_type: $bagType');
+              
+              // Proceed with generation
+              controller.generateDesign(context);
+            },
       isLoading: controller.isLoading.value,
       backgroundColor: const Color(0xFF1F7CD5),
       textColor: Colors.white,

@@ -1,8 +1,10 @@
-import 'dart:math' show cos, sin;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:video_player/video_player.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../../utils/app_fonts.dart';
+import '../../utils/app_colors.dart';
 import '../../widgets/custom_assets.dart';
 import '../../widgets/custom_button.dart';
 
@@ -80,7 +82,7 @@ class _AIGenerationScreenState extends State<AIGenerationScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: _isGenerating
-            ? _LoadingContent()
+            ? const _LoadingContent()
             : _showResult
                 ? _ResultContent(
                     generatedImageUrl: widget.getGeneratedImageUrl?.call(),
@@ -105,42 +107,23 @@ class _LoadingContent extends StatefulWidget {
   State<_LoadingContent> createState() => _LoadingContentState();
 }
 
-class _LoadingContentState extends State<_LoadingContent>
-    with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _rotationController;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _rotationAnimation;
+class _LoadingContentState extends State<_LoadingContent> {
+  late final VideoPlayerController _videoController;
 
   @override
   void initState() {
     super.initState();
-
-    // Pulse animation
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    // Rotation animation
-    _rotationController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
-      vsync: this,
-    )..repeat();
-
-    _rotationAnimation = Tween<double>(begin: 0, end: 1).animate(
-      _rotationController,
-    );
+    _videoController = VideoPlayerController.asset('assets/videos/loading_logo.mp4')
+      ..initialize().then((_) {
+        if (mounted) setState(() {});
+        _videoController.setLooping(true);
+        _videoController.play();
+      });
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
-    _rotationController.dispose();
+    _videoController.dispose();
     super.dispose();
   }
 
@@ -192,111 +175,25 @@ class _LoadingContentState extends State<_LoadingContent>
                 SizedBox(height: 60.h),
                 
                 // AI Generation Animation Container
-                Container(
-                  width: double.infinity,
-                  height: 350.h,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F5),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Center(
-                    child: AnimatedBuilder(
-                      animation: Listenable.merge([_pulseController, _rotationController]),
-                      builder: (context, child) {
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Animated wave circles (expanding ripples)
-                            for (int i = 0; i < 3; i++)
-                              Transform.scale(
-                                scale: 1.0 + (_pulseAnimation.value + (i * 0.33)) % 1.0,
-                                child: Opacity(
-                                  opacity: 1.0 - ((_pulseAnimation.value + (i * 0.33)) % 1.0),
-                                  child: Container(
-                                    width: 120.w,
-                                    height: 120.h,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFF1F7CD5).withValues(alpha: 0.4),
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            
-                            // Floating particles with neural connections
-                            Container(
-                              width: 180.w,
-                              height: 180.h,
-                              child: CustomPaint(
-                                painter: _NeuralNetworkPainter(
-                                  progress: _rotationAnimation.value,
-                                  primaryColor: const Color(0xFF1F7CD5),
-                                  secondaryColor: const Color(0xFF008BA6),
+                ClipRect(
+                  child: Container(
+                    width: double.infinity,
+                    height: 350.h,
+                    child: _videoController.value.isInitialized
+                        ? Transform.scale(
+                            scale: 1.30,
+                            child: SizedBox.expand(
+                              child: FittedBox(
+                                fit: BoxFit.cover,
+                                child: SizedBox(
+                                  width: _videoController.value.size.width,
+                                  height: _videoController.value.size.height,
+                                  child: VideoPlayer(_videoController),
                                 ),
                               ),
                             ),
-                            
-                            // Central glowing orb
-                            Container(
-                              width: 70.w,
-                              height: 70.h,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: RadialGradient(
-                                  colors: [
-                                    const Color(0xFF1F7CD5).withValues(alpha: 0.8),
-                                    const Color(0xFF1F7CD5).withValues(alpha: 0.4),
-                                    const Color(0xFF1F7CD5).withValues(alpha: 0.0),
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF1F7CD5).withValues(alpha: 0.5),
-                                    blurRadius: 30,
-                                    spreadRadius: 10,
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: Container(
-                                  width: 45.w,
-                                  height: 45.h,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF1F7CD5),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.auto_awesome,
-                                    size: 28.sp,
-                                    color: const Color(0xFFFFF5E1),
-                                    shadows: [
-                                      Shadow(
-                                        color: const Color(0xFFFFF5E1).withValues(alpha: 0.40),
-                                        offset: const Offset(0, 0),
-                                        blurRadius: 18,
-                                      ),
-                                      Shadow(
-                                        color: const Color(0xFF60A5FA).withValues(alpha: 0.45),
-                                        offset: const Offset(0, 0),
-                                        blurRadius: 28,
-                                      ),
-                                      Shadow(
-                                        color: Colors.black.withValues(alpha: 0.10),
-                                        offset: const Offset(1, 2),
-                                        blurRadius: 6,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ),
 
@@ -314,7 +211,7 @@ class _LoadingContentState extends State<_LoadingContent>
                         ),
                       ),
                       TextSpan(
-                        text: '10-20 seconds.',
+                        text: '1-2 Minutes .',
                         style: AppFonts.interSemiBold(
                           fontSize: 16.sp,
                           color: const Color(0xFF0F0F0F),
@@ -325,20 +222,15 @@ class _LoadingContentState extends State<_LoadingContent>
                   textAlign: TextAlign.center,
                 ),
 
-                SizedBox(height: 24.h),
+                SizedBox(height: 40.h),
 
-                // Loading indicator
-                SizedBox(
-                  width: 40.w,
-                  height: 40.h,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 4,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      const Color(0xFF1F7CD5),
-                    ),
-                  ),
+                LoadingAnimationWidget.discreteCircle(
+                  color: AppColors.primary,
+                  secondRingColor: AppColors.secondary,
+                  thirdRingColor: AppColors.primaryLight,
+                  size: 40.r,
                 ),
-
+  
                 SizedBox(height: 60.h),
               ],
             ),
@@ -346,98 +238,6 @@ class _LoadingContentState extends State<_LoadingContent>
         ),
       ],
     );
-  }
-}
-
-/// Custom painter for neural network AI animation
-class _NeuralNetworkPainter extends CustomPainter {
-  final double progress;
-  final Color primaryColor;
-  final Color secondaryColor;
-
-  _NeuralNetworkPainter({
-    required this.progress,
-    required this.primaryColor,
-    required this.secondaryColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-    
-    // Define particle positions (nodes in neural network)
-    final particles = <Offset>[];
-    for (int i = 0; i < 8; i++) {
-      final angle = (i * 2 * 3.14159 / 8) + (progress * 2 * 3.14159 * 0.2);
-      final distance = radius * (0.7 + 0.1 * sin(progress * 2 * 3.14159 + i));
-      particles.add(Offset(
-        center.dx + distance * cos(angle),
-        center.dy + distance * sin(angle),
-      ));
-    }
-    
-    // Draw connections between nearby particles
-    final connectionPaint = Paint()
-      ..strokeWidth = 1.5
-      ..strokeCap = StrokeCap.round;
-    
-    for (int i = 0; i < particles.length; i++) {
-      for (int j = i + 1; j < particles.length; j++) {
-        final distance = (particles[i] - particles[j]).distance;
-        if (distance < radius * 0.8) {
-          final opacity = (1.0 - distance / (radius * 0.8)) * 0.4;
-          connectionPaint.color = primaryColor.withValues(alpha: opacity);
-          canvas.drawLine(particles[i], particles[j], connectionPaint);
-        }
-      }
-    }
-    
-    // Draw particles
-    for (int i = 0; i < particles.length; i++) {
-      final particleProgress = (progress + (i / particles.length)) % 1.0;
-      final pulseScale = 1.0 + 0.3 * sin(particleProgress * 2 * 3.14159);
-      
-      // Glow
-      final glowPaint = Paint()
-        ..color = (i % 2 == 0 ? primaryColor : secondaryColor).withValues(alpha: 0.3)
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(particles[i], 8 * pulseScale, glowPaint);
-      
-      // Solid particle
-      final particlePaint = Paint()
-        ..color = i % 2 == 0 ? primaryColor : secondaryColor
-        ..style = PaintingStyle.fill;
-      canvas.drawCircle(particles[i], 4 * pulseScale, particlePaint);
-    }
-    
-    // Draw data flow lines (animated)
-    final flowPaint = Paint()
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
-    
-    for (int i = 0; i < 3; i++) {
-      final flowProgress = (progress * 3 + i * 0.33) % 1.0;
-      final startAngle = flowProgress * 2 * 3.14159;
-      final endAngle = startAngle + 0.8;
-      
-      flowPaint.color = primaryColor.withValues(
-        alpha: sin(flowProgress * 3.14159) * 0.6,
-      );
-      
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius * 0.5),
-        startAngle,
-        endAngle - startAngle,
-        false,
-        flowPaint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_NeuralNetworkPainter oldDelegate) {
-    return oldDelegate.progress != progress;
   }
 }
 

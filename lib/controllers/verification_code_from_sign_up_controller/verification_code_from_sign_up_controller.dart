@@ -163,9 +163,9 @@ class VerificationCodeControllerfromSignup extends GetxController {
         // Small delay so toast is visible
         await Future.delayed(const Duration(milliseconds: 700));
 
-        // Navigate to Create (home) screen
+        // Navigate to Terms and Conditions (onboarding) screen
         if (context.mounted) {
-          context.go(AppPath.create);
+          context.go('${AppPath.termsAndConditions}?onboarding=true');
         }
       } else {
         _showError(

@@ -355,7 +355,7 @@ class _ImagePreviewContent extends StatelessWidget {
             
             // Selected Image
             Container(
-              width: 358.w,
+              width: double.infinity,
               height: 358.h,
               decoration: ShapeDecoration(
                 image: DecorationImage(

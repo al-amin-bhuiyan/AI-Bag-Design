@@ -5,31 +5,56 @@ import '../../../controllers/terms_and_conditions_controller/terms_and_condition
 import '../../../widgets/custom_back_button.dart';
 import '../../../utils/app_colors.dart';
 import '../../../utils/app_fonts.dart';
+import '../../../widgets/custom_button.dart';
 
-/// Terms & Conditions Screen - Displays terms with expandable sections
+/// Terms & Conditions Screen - Displays terms with expandable sections or a page view
 /// Follows OOP principles with composition and encapsulation
-class TermsAndConditionsScreen extends StatelessWidget {
-  const TermsAndConditionsScreen({super.key});
+class TermsAndConditionsScreen extends StatefulWidget {
+  final bool isFromOnboarding;
+
+  const TermsAndConditionsScreen({
+    super.key,
+    this.isFromOnboarding = false,
+  });
+
+  @override
+  State<TermsAndConditionsScreen> createState() => _TermsAndConditionsScreenState();
+}
+
+class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
+  late TermsAndConditionsController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controller and set the value directly
+    controller = Get.put(TermsAndConditionsController());
+    // Safe to set value right after initialization before build
+    controller.isFromOnboarding.value = widget.isFromOnboarding;
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Initialize controller
-    final controller = Get.put(TermsAndConditionsController());
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
+        child: Obx(() => Column(
           children: [
             // App Bar
             _AppBar(controller: controller),
             
             // Content
             Expanded(
-              child: _TermsContent(controller: controller),
+              child: controller.isFromOnboarding.value
+                  ? _TermsOnboardingContent(controller: controller)
+                  : _TermsVerticalContent(controller: controller),
             ),
+            
+            // Bottom Action Row (Only for onboarding)
+            if (controller.isFromOnboarding.value)
+              _BottomActionRow(controller: controller),
           ],
-        ),
+        )),
       ),
     );
   }
@@ -80,18 +105,95 @@ class _AppBar extends StatelessWidget {
   }
 }
 
-/// Private widget for terms content
-/// Encapsulates scrollable list of terms sections
-class _TermsContent extends StatelessWidget {
+/// Private widget for terms onboarding content
+/// Encapsulates horizontal scrollable list of terms sections
+class _TermsOnboardingContent extends StatelessWidget {
   final TermsAndConditionsController controller;
 
-  const _TermsContent({required this.controller});
+  const _TermsOnboardingContent({required this.controller});
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
       if (controller.isLoading) {
-        return _LoadingView();
+        return const _LoadingView();
+      }
+
+      final sections = controller.termsSections;
+
+      return PageView.builder(
+        controller: controller.pageController,
+        onPageChanged: controller.onPageChanged,
+        itemCount: sections.length,
+        itemBuilder: (context, index) {
+          final section = sections[index];
+          return SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 26.w, vertical: 16.h),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(24.w),
+              decoration: ShapeDecoration(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(
+                    width: 1,
+                    color: Color(0xFFE5E7EB),
+                  ),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                shadows: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    section.title,
+                    style: AppFonts.poppinsSemiBold(
+                      fontSize: 18.sp,
+                      color: const Color(0xFF0F0F0F),
+                    ).copyWith(height: 1.33),
+                  ),
+                  SizedBox(height: 16.h),
+                  Container(
+                    height: 1,
+                    color: const Color(0xFFE5E7EB),
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    section.content,
+                    style: AppFonts.poppinsRegular(
+                      fontSize: 14.sp,
+                      color: const Color(0xFF6B7280),
+                    ).copyWith(height: 1.6),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    });
+  }
+}
+
+/// Private widget for terms vertical content
+/// Encapsulates vertical scrollable expandable list of terms sections (Accordion)
+class _TermsVerticalContent extends StatelessWidget {
+  final TermsAndConditionsController controller;
+
+  const _TermsVerticalContent({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (controller.isLoading) {
+        return const _LoadingView();
       }
 
       return RefreshIndicator(
@@ -117,7 +219,6 @@ class _TermsContent extends StatelessWidget {
 }
 
 /// Private widget for terms sections list
-/// Encapsulates list of expandable terms sections
 class _TermsList extends StatelessWidget {
   final TermsAndConditionsController controller;
 
@@ -145,8 +246,7 @@ class _TermsList extends StatelessWidget {
   }
 }
 
-/// Private widget for individual terms section
-/// Encapsulates expandable section with title and content
+/// Private widget for individual terms section (Accordion Item)
 class _TermsSectionItem extends StatelessWidget {
   final TermsAndConditionsController controller;
   final TermsSection section;
@@ -169,9 +269,9 @@ class _TermsSectionItem extends StatelessWidget {
         decoration: ShapeDecoration(
           color: Colors.white,
           shape: RoundedRectangleBorder(
-            side: BorderSide(
+            side: const BorderSide(
               width: 1,
-              color: const Color(0xFFE5E7EB),
+              color: Color(0xFFE5E7EB),
             ),
             borderRadius: BorderRadius.circular(8.r),
           ),
@@ -180,7 +280,6 @@ class _TermsSectionItem extends StatelessWidget {
               color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
-              spreadRadius: 0,
             ),
           ],
         ),
@@ -206,7 +305,6 @@ class _TermsSectionItem extends StatelessWidget {
 }
 
 /// Private widget for section header
-/// Encapsulates title and expand/collapse icon
 class _SectionHeader extends StatelessWidget {
   final String title;
   final bool isExpanded;
@@ -254,7 +352,6 @@ class _SectionHeader extends StatelessWidget {
 }
 
 /// Private widget for expand/collapse icon
-/// Encapsulates animated chevron icon
 class _ExpandIcon extends StatelessWidget {
   final bool isExpanded;
 
@@ -276,7 +373,6 @@ class _ExpandIcon extends StatelessWidget {
 }
 
 /// Private widget for section body
-/// Encapsulates expandable content
 class _SectionBody extends StatelessWidget {
   final String content;
   final bool isExpanded;
@@ -301,7 +397,6 @@ class _SectionBody extends StatelessWidget {
 }
 
 /// Private widget for content text
-/// Encapsulates the content text with proper styling
 class _ContentText extends StatelessWidget {
   final String content;
 
@@ -335,6 +430,86 @@ class _ContentText extends StatelessWidget {
             ).copyWith(height: 1.54),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Private widget for bottom action row
+class _BottomActionRow extends StatelessWidget {
+  final TermsAndConditionsController controller;
+
+  const _BottomActionRow({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 26.w, vertical: 16.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Obx(() {
+          final isLast = controller.isLastPage;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Page indicators
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  controller.termsSections.length,
+                  (index) => Container(
+                    margin: EdgeInsets.symmetric(horizontal: 4.w),
+                    width: 8.w,
+                    height: 8.h,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: controller.currentPage.value == index
+                          ? AppColors.primary
+                          : const Color(0xFFE5E7EB),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 16.h),
+              
+              // Action buttons
+              Row(
+                children: [
+                  if (controller.currentPage.value > 0) ...[
+                    Expanded(
+                      flex: 1,
+                      child: CustomButton.outlined(
+                        label: 'Back',
+                        onPressed: controller.previousPage,
+                      ),
+                    ),
+                    SizedBox(width: 16.w),
+                  ],
+                  
+                  Expanded(
+                    flex: 2,
+                    child: CustomButton.primary(
+                      label: isLast ? 'Agree & Continue' : 'Next',
+                      onPressed: isLast 
+                          ? () => controller.agreeAndContinue(context)
+                          : controller.nextPage,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        }),
       ),
     );
   }

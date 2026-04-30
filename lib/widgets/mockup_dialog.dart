@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
+import 'package:awesome_dialog/awesome_dialog.dart';
 import '../utils/app_colors.dart';
 import '../utils/app_fonts.dart';
 import '../routes/app_path.dart';
 import 'custom_button.dart';
+import 'custom_assets.dart';
 
 /// MockupDialog - Popup dialog displaying bag mockup with different angles
 /// Follows OOP principles with clean separation and reusability
@@ -465,7 +467,115 @@ class _ActionButtons extends StatelessWidget {
           text: 'Add to Collections',
           backgroundColor: AppColors.addtocollectionbuttonbackground,
           textColor: const Color(0xFF0F0F0F),
-          onPressed: onAddToCollections,
+          onPressed: () async {
+            AwesomeDialog(
+              context: context,
+              animType: AnimType.scale,
+              dialogType: DialogType.noHeader,
+              customHeader: Container(
+                width: 100.r, // Standard size for AwesomeDialog headers
+                height: 100.r,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                    image: AssetImage(CustomAssets.logoSs),
+                    fit: BoxFit.cover, // This makes the image fill the entire circular area
+                  ),
+                ),
+              ),
+              body: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Design Saved!',
+                      style: AppFonts.poppinsSemiBold(
+                        fontSize: 24.sp,
+                        color: const Color(0xFF4A4A4A),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Bag design saved. Contact us to claim:',
+                      textAlign: TextAlign.center,
+                      style: AppFonts.interSemiBold(
+                        fontSize: 14.sp,
+                        color: const Color(0xFF3B4094),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SelectableText.rich(
+                            TextSpan(
+                              style: AppFonts.interRegular(
+                                fontSize: 13.sp,
+                                color: const Color(0xFF4B4B4B),
+                              ),
+                              children: const [
+                                TextSpan(
+                                  text: 'Phone: ',
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                                ),
+                                TextSpan(text: '1-909-902-5777'),
+                              ],
+                            ),
+                            cursorColor: const Color(0xFF1F7CD5),
+                            showCursor: true,
+                          ),
+                          SizedBox(height: 8.h),
+                          SelectableText.rich(
+                            TextSpan(
+                              style: AppFonts.interRegular(
+                                fontSize: 13.sp,
+                                color: const Color(0xFF4B4B4B),
+                              ),
+                              children: const [
+                                TextSpan(
+                                  text: 'Email: ',
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                                ),
+                                TextSpan(
+                                  text: 'info@Soesternpackaging.com',
+                                  style: TextStyle(color: Color(0xFF1F60D6), decoration: TextDecoration.underline),
+                                ),
+                              ],
+                            ),
+                            cursorColor: const Color(0xFF1F7CD5),
+                            showCursor: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'Please contact us for further process.',
+                      textAlign: TextAlign.center,
+                      style: AppFonts.interRegular(
+                        fontSize: 13.sp,
+                        color: const Color(0xFF5A5A5A),
+                      ),
+                    ),
+                    SizedBox(height: 8.h),
+                  ],
+                ),
+              ),
+              btnOkText: 'Close',
+              btnOkColor: const Color(0xFF6E60DB),
+              buttonsBorderRadius: BorderRadius.all(Radius.circular(6.r)),
+              buttonsTextStyle: AppFonts.interMedium(
+                fontSize: 14.sp,
+                color: Colors.white,
+              ),
+              btnOkOnPress: () async {
+                await onAddToCollections?.call();
+              },
+            ).show();
+          },
         ),
       ],
     );

@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jeebz_bag_design_app/utils/app_colors.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../../controllers/profile_controller/profile_controller.dart';
 import '../../utils/app_fonts.dart';
 import '../../widgets/custom_assets.dart';
@@ -301,9 +302,9 @@ class _ProfileCard extends StatelessWidget {
                 child: SizedBox(
                   width: 16.w,
                   height: 16.h,
-                  child: const CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xFF1F7CD5),
+                  child: LoadingAnimationWidget.beat(
+                    color: const Color(0xFF1F7CD5),
+                    size: 16.w,
                   ),
                 ),
               ),
@@ -340,10 +341,10 @@ class _ProfileAvatar extends StatelessWidget {
                 if (progress == null) return child;
                 return Container(
                   color: const Color(0xFFF2F4F6),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF1F7CD5),
+                  child: Center(
+                    child: LoadingAnimationWidget.beat(
+                      color: const Color(0xFF1F7CD5),
+                      size: 20.w,
                     ),
                   ),
                 );
@@ -586,9 +587,9 @@ class _LogoutButton extends StatelessWidget {
               SizedBox(
                 width: 20.w,
                 height: 20.h,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: Colors.white,
+                  size: 20.w,
                 ),
               )
             else ...[

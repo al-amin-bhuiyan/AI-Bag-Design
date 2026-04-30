@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 import '../utils/app_colors.dart';
 import '../utils/app_fonts.dart';
@@ -507,11 +508,11 @@ class _ButtonRow extends StatelessWidget {
         // Loading indicator
         if (isLoading) ...[
           SizedBox(
-            width: 18.sp,
-            height: 18.sp,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            width: 24.sp,
+            height: 24.sp,
+            child: LoadingAnimationWidget.progressiveDots(
+              color: Colors.white,
+              size: 24.sp,
             ),
           ),
           SizedBox(width: 10.w),

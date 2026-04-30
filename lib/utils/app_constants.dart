@@ -5,7 +5,7 @@ class AppConstants {
   AppConstants._();
 
   // ─── Base URL ───────────────────────────────────────────────────────────────
-  static const String baseUrl = 'http://10.10.7.74:8000';
+  static const String baseUrl = 'http://18.233.192.169:8000';
 
   // ─── API Endpoints ──────────────────────────────────────────────────────────
   static const String registerEndpoint = '/accounts/user/register/';

@@ -7,6 +7,7 @@ import '../../services/bag_design_service.dart';
 import '../your_design_controller/your_design_controller.dart';
 import '../../views/ai_generation/ai_generation_screen.dart';
 import '../../widgets/mockup_dialog.dart';
+import '../../widgets/ai_generation_loading_widget.dart';
 
 /// TextToDesignController - Manages AI text-to-design screen state and business logic
 /// Follows OOP principles with clear separation of concerns
@@ -230,35 +231,69 @@ class TextToDesignController extends GetxController {
       return;
     }
 
-    _setLoading(true);
-    try {
-      final bagType = _resolveBagType();
-      final response = await _bagDesignService.generateDesign(
-        bagType: bagType,
-        logoUrl: logoUrl,
-      );
+    // Capture the resolved bagType immediately using GetX
+    final bagType = _resolveBagType();
+    print('🎒 Saving generated design using bag_type: $bagType');
+    
+    var generationSucceeded = false;
 
-      if (!response.success || response.data == null) {
-        Fluttertoast.showToast(
-          msg: response.errorMessage ?? 'Failed to generate bag design',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 15.0,
+    // Show full-screen loading animation immediately, similar to UploadImage logic
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AIGenerationLoadingWidget(
+          onGenerate: () async {
+            // REAL API CALL with resolved bag_type and generated AI logo
+            try {
+              final response = await _bagDesignService.generateDesign(
+                bagType: bagType,
+                logoUrl: logoUrl,
+              );
+
+              if (response.success && response.data != null) {
+                _generatedPreviewUrl.value = response.data!.previewUrl;
+                _generatedDielineUrl.value = response.data!.dielineUrl;
+                _generatedDesignPreviewId.value = response.data!.previewId;
+                generationSucceeded = true;
+              } else {
+                Fluttertoast.showToast(
+                  msg: response.errorMessage ?? 'Failed to generate bag design',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                  fontSize: 15.0,
+                );
+              }
+            } catch (e) {
+              Fluttertoast.showToast(
+                msg: 'Error: $e',
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 15.0,
+              );
+            }
+          },
+          onClose: () {
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+          },
         );
-        return;
-      }
-
-      _generatedPreviewUrl.value = response.data!.previewUrl;
-      _generatedDielineUrl.value = response.data!.dielineUrl;
-      _generatedDesignPreviewId.value = response.data!.previewId;
-    } finally {
-      _setLoading(false);
-    }
+      },
+    );
 
     if (!context.mounted) return;
+    
+    // Only continue if creation was successful and we actually have paths
+    if (!generationSucceeded || _generatedPreviewUrl.value == null || _generatedDielineUrl.value == null) {
+      return;
+    }
 
+    // Now securely pass those URLs directly into the Mockup Dialog component
     await MockupDialog.show(
       context,
       images: [_generatedPreviewUrl.value!, _generatedDielineUrl.value!],

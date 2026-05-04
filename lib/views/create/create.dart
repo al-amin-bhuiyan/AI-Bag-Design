@@ -16,8 +16,6 @@ class CreateScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(CreateController());
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -35,17 +33,17 @@ class CreateScreen extends StatelessWidget {
                 SizedBox(height: 55.h),
                 
                 // Bag Type Options
-                _BagTypeOptions(controller: controller),
+                const _BagTypeOptions(),
                 
                 SizedBox(height: 50.h),
                 
                 // Subtitle
-                _Subtitle(),
+                const _Subtitle(),
                 
                 SizedBox(height: 34.h),
                 
                 // Creation Options
-                _CreationOptions(controller: controller),
+                const _CreationOptions(),
                 
                 SizedBox(height: 40.h),
               ],
@@ -101,12 +99,11 @@ class _PageTitle extends StatelessWidget {
 
 /// Bag type options (Full Graphic and Label)
 class _BagTypeOptions extends StatelessWidget {
-  final CreateController controller;
-
-  const _BagTypeOptions({required this.controller});
+  const _BagTypeOptions();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<CreateController>();
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -245,12 +242,11 @@ class _Subtitle extends StatelessWidget {
 
 /// Creation options (Upload and Generate AI)
 class _CreationOptions extends StatelessWidget {
-  final CreateController controller;
-
-  const _CreationOptions({required this.controller});
+  const _CreationOptions();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<CreateController>();
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

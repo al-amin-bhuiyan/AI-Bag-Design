@@ -15,6 +15,7 @@ import '../controllers/contact_support_controller/contact_support_controller.dar
 import '../controllers/privacy_policy_controller/privacy_policy_controller.dart';
 import '../controllers/terms_and_conditions_controller/terms_and_conditions_controller.dart';
 import '../controllers/your_design_controller/your_design_controller.dart';
+import '../services/network/network_manager.dart';
 
 /// Binding class manages dependency injection for the entire application
 /// Follows OOP principles with separation of concerns and lazy initialization
@@ -55,6 +56,9 @@ class Binding {
     // Services are singletons — no need to register with Get
     // AuthStateService.instance, TokenStorageService.instance, etc.
     // are accessed directly via their singleton accessors
+    
+    // Register global network manager
+    Get.put<NetworkManager>(NetworkManager(), permanent: true);
   }
 
   /// Cleans up all dependencies

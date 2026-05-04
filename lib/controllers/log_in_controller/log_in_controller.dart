@@ -8,6 +8,7 @@ import '../../models/login_model.dart';
 import '../../routes/app_path.dart';
 import '../../services/auth_service.dart';
 import '../../services/auth_state_service.dart';
+import '../../services/network/network_manager.dart';
 import '../../services/session_data_isolation_service.dart';
 import '../../services/token_storage_service.dart';
 import '../../services/user_session_service.dart';
@@ -42,6 +43,14 @@ class LogInController extends GetxController {
   void onInit() {
     super.onInit();
     _loadSavedEmail();
+
+    if (Get.isRegistered<NetworkManager>()) {
+      ever(Get.find<NetworkManager>().isConnected, (bool connected) {
+        if (connected) {
+          debugPrint('🌐 Internet restored on Login screen.');
+        }
+      });
+    }
   }
 
   @override

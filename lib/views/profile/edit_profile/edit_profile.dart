@@ -35,12 +35,12 @@ class EditProfile extends StatelessWidget {
                   SizedBox(height: 76.h), // Space for app bar
                   
                   // Profile Photo Section
-                  _ProfilePhotoSection(controller: controller),
+                  const _ProfilePhotoSection(),
                   
                   SizedBox(height: 46.h),
                   
                   // Form Fields
-                  _ProfileForm(controller: controller),
+                  const _ProfileForm(),
                   
                   SizedBox(height: 40.h), // Bottom padding
                 ],
@@ -202,12 +202,11 @@ class _BottomIndicator extends StatelessWidget {
 
 /// Profile Photo Section Widget
 class _ProfilePhotoSection extends StatelessWidget {
-  final EditProfileController controller;
-
-  const _ProfilePhotoSection({required this.controller});
+  const _ProfilePhotoSection();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<EditProfileController>();
     return Column(
       children: [
         // Profile Image — tappable avatar
@@ -302,9 +301,7 @@ class _ProfilePhotoSection extends StatelessWidget {
 
 /// Profile Form Widget
 class _ProfileForm extends StatelessWidget {
-  final EditProfileController controller;
-
-  const _ProfileForm({required this.controller});
+  const _ProfileForm();
 
   @override
   Widget build(BuildContext context) {
@@ -312,27 +309,27 @@ class _ProfileForm extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Name Field
-        _NameField(controller: controller),
+        const _NameField(),
         
         SizedBox(height: 24.h),
         
         // Email Field  
-        _EmailField(controller: controller),
+        const _EmailField(),
         
         SizedBox(height: 24.h),
         
         // Language Field
-        _LanguageField(controller: controller),
+        const _LanguageField(),
         
         SizedBox(height: 24.h),
         
         // Save Change Button
-        _SaveChangeButton(controller: controller),
+        const _SaveChangeButton(),
         
         SizedBox(height: 24.h),
         
         // Connected Social Accounts
-        _SocialAccountsSection(controller: controller),
+        const _SocialAccountsSection(),
       ],
     );
   }
@@ -340,12 +337,11 @@ class _ProfileForm extends StatelessWidget {
 
 /// Name Field Widget
 class _NameField extends StatelessWidget {
-  final EditProfileController controller;
-
-  const _NameField({required this.controller});
+  const _NameField();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<EditProfileController>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -408,12 +404,11 @@ class _NameField extends StatelessWidget {
 
 /// Email Field Widget
 class _EmailField extends StatelessWidget {
-  final EditProfileController controller;
-
-  const _EmailField({required this.controller});
+  const _EmailField();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<EditProfileController>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -477,12 +472,11 @@ class _EmailField extends StatelessWidget {
 
 /// Language Field Widget
 class _LanguageField extends StatelessWidget {
-  final EditProfileController controller;
-
-  const _LanguageField({required this.controller});
+  const _LanguageField();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<EditProfileController>();
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -564,12 +558,11 @@ class _LanguageField extends StatelessWidget {
 
 /// Save Change Button Widget
 class _SaveChangeButton extends StatelessWidget {
-  final EditProfileController controller;
-
-  const _SaveChangeButton({required this.controller});
+  const _SaveChangeButton();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<EditProfileController>();
     return Obx(() => GestureDetector(
       onTap: controller.isSaving.value
           ? null
@@ -629,12 +622,11 @@ class _SaveChangeButton extends StatelessWidget {
 
 /// Social Accounts Section Widget
 class _SocialAccountsSection extends StatelessWidget {
-  final EditProfileController controller;
-
-  const _SocialAccountsSection({required this.controller});
+  const _SocialAccountsSection();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<EditProfileController>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

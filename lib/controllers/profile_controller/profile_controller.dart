@@ -10,6 +10,7 @@ import '../../services/auth_state_service.dart';
 import '../../services/session_data_isolation_service.dart';
 import '../../services/token_storage_service.dart';
 import '../../services/user_session_service.dart';
+import '../../services/network/network_manager.dart';
 
 /// ProfileController - Manages profile screen state and business logic
 /// Reads user data from UserSessionService (single source of truth)
@@ -44,6 +45,16 @@ class ProfileController extends GetxController {
       _loadCachedProfile();
     }
     fetchProfile();
+    
+    // Auto-retry fetching data when internet comes back online
+    if (Get.isRegistered<NetworkManager>()) {
+      ever(Get.find<NetworkManager>().isConnected, (bool connected) {
+        if (connected) {
+          debugPrint('🌐 Internet restored: Auto-refreshing profile data...');
+          fetchProfile();
+        }
+      });
+    }
   }
 
   // ─── Private ──────────────────────────────────────────────────────────────

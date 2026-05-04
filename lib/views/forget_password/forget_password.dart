@@ -18,16 +18,14 @@ class ForgotPasswordScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _ForgotPasswordContent(controller: controller),
+      body: const _ForgotPasswordContent(),
     );
   }
 }
 
 /// Private widget for forgot password screen content
 class _ForgotPasswordContent extends StatelessWidget {
-  final ForgotPasswordController controller;
-
-  const _ForgotPasswordContent({required this.controller});
+  const _ForgotPasswordContent();
 
   @override
   Widget build(BuildContext context) {
@@ -46,10 +44,10 @@ class _ForgotPasswordContent extends StatelessWidget {
           Positioned(
             left: 26.w,
             top: 131.h,
-            child: _MainContent(controller: controller),
+            child: const _MainContent(),
           ),
           // App Bar
-          _AppBar(controller: controller),
+          const _AppBar(),
         ],
       ),
     );
@@ -170,9 +168,7 @@ class _BottomNavigationBar extends StatelessWidget {
 
 /// Main content widget
 class _MainContent extends StatelessWidget {
-  final ForgotPasswordController controller;
-
-  const _MainContent({required this.controller});
+  const _MainContent();
 
   @override
   Widget build(BuildContext context) {
@@ -185,9 +181,9 @@ class _MainContent extends StatelessWidget {
         children: [
           _HeaderSection(),
           SizedBox(height: 32.h),
-          _RecoveryMethodSection(controller: controller),
+          const _RecoveryMethodSection(),
           SizedBox(height: 40.h),
-          _ContinueButton(controller: controller),
+          const _ContinueButton(),
         ],
       ),
     );
@@ -230,11 +226,9 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-/// Recovery method section — email input field
+/// Recovery method section €” email input field
 class _RecoveryMethodSection extends StatelessWidget {
-  final ForgotPasswordController controller;
-
-  const _RecoveryMethodSection({required this.controller});
+  const _RecoveryMethodSection();
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +246,7 @@ class _RecoveryMethodSection extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8.h),
-          _EmailTextField(controller: controller),
+          const _EmailTextField(),
         ],
       ),
     );
@@ -261,12 +255,11 @@ class _RecoveryMethodSection extends StatelessWidget {
 
 /// Email text field widget
 class _EmailTextField extends StatelessWidget {
-  final ForgotPasswordController controller;
-
-  const _EmailTextField({required this.controller});
+  const _EmailTextField();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<ForgotPasswordController>();
     return Container(
       width: double.infinity,
       height: 52.h,
@@ -318,12 +311,11 @@ class _EmailTextField extends StatelessWidget {
 
 /// App bar with back button and title
 class _AppBar extends StatelessWidget {
-  final ForgotPasswordController controller;
-
-  const _AppBar({required this.controller});
+  const _AppBar();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<ForgotPasswordController>();
     return Positioned(
       left: 0,
       top: 44.h,
@@ -365,12 +357,11 @@ class _AppBar extends StatelessWidget {
 
 /// Continue button widget
 class _ContinueButton extends StatelessWidget {
-  final ForgotPasswordController controller;
-
-  const _ContinueButton({required this.controller});
+  const _ContinueButton();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<ForgotPasswordController>();
     return Obx(() => CircleFadeAnimation(
           onPressed: controller.isLoading
               ? null

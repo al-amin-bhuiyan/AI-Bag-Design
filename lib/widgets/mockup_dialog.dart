@@ -452,34 +452,32 @@ class _ActionButtons extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Save Images Button
+        // Merged Single Button: Save it
         _ActionButton(
-          text: 'Save Images',
+          text: 'Save it',
           backgroundColor: AppColors.googlebuttonColor,
           textColor: Colors.white,
-          onPressed: onSaveImages,
-        ),
-
-        SizedBox(height: 16.h),
-
-        // Add to Collections Button
-        _ActionButton(
-          text: 'Add to Collections',
-          backgroundColor: AppColors.addtocollectionbuttonbackground,
-          textColor: const Color(0xFF0F0F0F),
           onPressed: () async {
+            // 1. Perform Save Images logic
+            if (onSaveImages != null) {
+              await onSaveImages!.call();
+            }
+
+            if (!context.mounted) return;
+
+            // 2. Show the pop-up dialog
             AwesomeDialog(
               context: context,
               animType: AnimType.scale,
               dialogType: DialogType.noHeader,
               customHeader: Container(
-                width: 100.r, // Standard size for AwesomeDialog headers
+                width: 100.r,
                 height: 100.r,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   image: DecorationImage(
                     image: AssetImage(CustomAssets.logoSs),
-                    fit: BoxFit.cover, // This makes the image fill the entire circular area
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
@@ -572,6 +570,7 @@ class _ActionButtons extends StatelessWidget {
                 color: Colors.white,
               ),
               btnOkOnPress: () async {
+                // 3. Add to collections logic
                 await onAddToCollections?.call();
               },
             ).show();

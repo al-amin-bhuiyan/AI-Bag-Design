@@ -8,9 +8,11 @@ import '../../models/api_response_model.dart';
 import '../../models/user_profile_model.dart';
 import '../../models/update_profile_request_model.dart';
 import '../../services/auth_service.dart';
+import '../../services/network/network_manager.dart';
 import '../../services/token_storage_service.dart';
 import '../../services/user_session_service.dart';
 import '../../utils/app_constants.dart';
+
 
 /// EditProfileController - Manages edit profile screen state and business logic
 /// Loads real user profile from API using Bearer token
@@ -47,6 +49,15 @@ class EditProfileController extends GetxController {
   void onInit() {
     super.onInit();
     _loadCachedThenFetch();
+    
+    if (Get.isRegistered<NetworkManager>()) {
+      ever(Get.find<NetworkManager>().isConnected, (bool connected) {
+        if (connected) {
+          debugPrint('🌐 Internet restored: Auto-refreshing profile data...');
+          _fetchFromApi();
+        }
+      });
+    }
   }
 
   @override

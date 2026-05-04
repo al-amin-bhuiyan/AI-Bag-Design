@@ -181,7 +181,7 @@ class _LoadingContentState extends State<_LoadingContent> {
                     height: 350.h,
                     child: _videoController.value.isInitialized
                         ? Transform.scale(
-                            scale: 1.30,
+                            scale: 1.20,
                             child: SizedBox.expand(
                               child: FittedBox(
                                 fit: BoxFit.cover,
@@ -396,7 +396,7 @@ class _ResultContent extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: Text(
-                    'Congrats! "i need a logo for SparkTech Name" is ready to use.',
+                    'Congrats! "Logo Generate Perfectly.Ready to Bag Design?',
                     style: AppFonts.interRegular(
                       fontSize: 16.sp,
                       color: const Color(0xFF1D2838),
@@ -454,7 +454,7 @@ class _ResultContent extends StatelessWidget {
                         ),
                         child: Center(
                           child: Text(
-                            'Add image to your design',
+                            'Make your Bag Design',
                             textAlign: TextAlign.center,
                             style: AppFonts.interMedium(
                               fontSize: 16.sp,

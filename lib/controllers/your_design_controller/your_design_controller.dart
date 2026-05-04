@@ -3,6 +3,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import '../collections_controller/collections_controller.dart';
 import '../../services/bag_design_service.dart';
+import '../../services/network/network_manager.dart';
 
 /// YourDesignController - Manages state and logic for Your Design screen
 /// Follows OOP principles with encapsulation and separation of concerns
@@ -38,6 +39,16 @@ class YourDesignController extends GetxController {
     super.onInit();
     resetState();
     refresh();
+    
+    // Auto-retry fetching data when internet comes back online
+    if (Get.isRegistered<NetworkManager>()) {
+      ever(Get.find<NetworkManager>().isConnected, (bool connected) {
+        if (connected) {
+          debugPrint('🌐 Internet restored: Auto-refreshing YourDesign data...');
+          refresh();
+        }
+      });
+    }
   }
 
   @override

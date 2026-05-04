@@ -5,6 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../routes/app_path.dart';
 import '../../services/auth_service.dart';
+import '../../services/network/network_manager.dart';
 import '../../widgets/dialogs/terms_and_privacy_dialog.dart';
 
 /// SignUpController manages sign up screen logic and state
@@ -40,6 +41,14 @@ class SignUpController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    if (Get.isRegistered<NetworkManager>()) {
+      ever(Get.find<NetworkManager>().isConnected, (bool connected) {
+        if (connected) {
+          debugPrint('🌐 Internet restored on Sign Up screen.');
+        }
+      });
+    }
   }
 
   @override

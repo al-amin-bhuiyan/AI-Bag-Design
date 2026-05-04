@@ -139,26 +139,33 @@ class _LoadingContentState extends State<_LoadingContent> {
                 SizedBox(height: 60.h),
 
                 // ── Video Animation ─────────────────────────────────────────────
-                ClipRect(
-                  child: Container(
-                    width: double.infinity,
-                    height: 350.h,
-                    child: _videoController.value.isInitialized
-                        ? Transform.scale(
-                      scale: 1.30,
-                      child: SizedBox.expand(
-                        child: FittedBox(
-                          fit: BoxFit.cover,
-                          child: SizedBox(
-                            width: _videoController.value.size.width,
-                            height: _videoController.value.size.height,
-                            child: VideoPlayer(_videoController),
+                Container(
+                  width: double.infinity,
+                  height: 300.h,
+                  clipBehavior: Clip.antiAlias, // Prevent overflow from scaling
+                  decoration: const BoxDecoration(
+                    color: Colors.transparent,
+                  ),
+                  child: _videoController.value.isInitialized
+                      ? Transform.scale(
+                          scale: 1.29, // Scale up to hide any black bars/margins
+                          child: FittedBox(
+                            fit: BoxFit.cover, // Fill the width perfectly
+                            child: SizedBox(
+                              width: _videoController.value.size.width,
+                              height: _videoController.value.size.height,
+                              child: VideoPlayer(_videoController),
+                            ),
+                          ),
+                        )
+                      : SizedBox(
+                          height: 100.h,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                        : const SizedBox.shrink(),
-                  ),
                 ),
 
                 SizedBox(height: 32.h),

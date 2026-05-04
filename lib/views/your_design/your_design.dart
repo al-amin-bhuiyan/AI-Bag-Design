@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../../controllers/your_design_controller/your_design_controller.dart';
 import '../../routes/app_path.dart';
 import '../../utils/app_constants.dart';
@@ -499,12 +500,30 @@ class _ProjectGridItemContent extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   height: 150.h,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8.r),
-                    image: DecorationImage(
-                      image: imageProvider,
-                      fit: BoxFit.cover,
-                    ),
+                  ),
+                  child: Image(
+                    image: imageProvider,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: LoadingAnimationWidget.inkDrop(
+                          color: const Color(0xFF1F7CD5),
+                          size: 30.sp,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: Icon(Icons.broken_image_outlined, color: Colors.grey[600]),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
@@ -656,12 +675,30 @@ class _ProjectListItemContent extends StatelessWidget {
             child: Container(
               width: 70.w,
               height: 70.h,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4.r),
-                image: DecorationImage(
-                  image: imageProvider,
-                  fit: BoxFit.cover,
-                ),
+              ),
+              child: Image(
+                image: imageProvider,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: LoadingAnimationWidget.inkDrop(
+                      color: const Color(0xFF1F7CD5),
+                      size: 20.sp,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey[200],
+                    child: Center(
+                      child: Icon(Icons.broken_image_outlined, color: Colors.grey[600]),
+                    ),
+                  );
+                },
               ),
             ),
           ),

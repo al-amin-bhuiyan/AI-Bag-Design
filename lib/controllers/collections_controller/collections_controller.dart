@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/save_collection_response_model.dart';
 import '../../services/bag_design_service.dart';
+import '../../services/network/network_manager.dart';
+
 
 /// CollectionsController manages collections screen logic and API state.
 class CollectionsController extends GetxController {
@@ -35,6 +37,15 @@ class CollectionsController extends GetxController {
     super.onInit();
     resetState();
     fetchCollections();
+    
+    if (Get.isRegistered<NetworkManager>()) {
+      ever(Get.find<NetworkManager>().isConnected, (bool connected) {
+        if (connected) {
+          debugPrint('🌐 Internet restored: Auto-refreshing collections...');
+          fetchCollections();
+        }
+      });
+    }
   }
 
   /// Clears all in-memory collection data.

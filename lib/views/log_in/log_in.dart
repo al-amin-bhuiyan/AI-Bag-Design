@@ -22,16 +22,14 @@ class LogInScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _LogInContent(controller: controller),
+      body: const _LogInContent(),
     );
   }
 }
 
 /// Private widget for login screen content
 class _LogInContent extends StatelessWidget {
-  final LogInController controller;
-
-  const _LogInContent({required this.controller});
+  const _LogInContent();
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +49,7 @@ class _LogInContent extends StatelessWidget {
                   SizedBox(height: 54.h),
                   _AppBar(),
                   SizedBox(height: 43.h),
-                  _LoginForm(controller: controller),
+                  const _LoginForm(),
                 ],
               ),
             ),
@@ -87,9 +85,7 @@ class _AppBar extends StatelessWidget {
 
 /// Main login form container
 class _LoginForm extends StatelessWidget {
-  final LogInController controller;
-
-  const _LoginForm({required this.controller});
+  const _LoginForm();
 
   @override
   Widget build(BuildContext context) {
@@ -105,17 +101,17 @@ class _LoginForm extends StatelessWidget {
           SizedBox(height: 32.h),
           
           // Input fields section
-          _InputFieldsSection(controller: controller),
+          const _InputFieldsSection(),
           
           SizedBox(height: 32.h),
           
           // Actions section
-          _ActionsSection(controller: controller),
+          const _ActionsSection(),
           
           SizedBox(height: 32.h),
           
           // Sign up prompt
-          _SignUpPrompt(controller: controller),
+          const _SignUpPrompt(),
         ],
       ),
     );
@@ -154,12 +150,11 @@ class _WelcomeSection extends StatelessWidget {
 
 /// Input fields section with email and password
 class _InputFieldsSection extends StatelessWidget {
-  final LogInController controller;
-
-  const _InputFieldsSection({required this.controller});
+  const _InputFieldsSection();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<LogInController>();
     return Column(
       children: [
         // Email field
@@ -181,7 +176,7 @@ class _InputFieldsSection extends StatelessWidget {
         SizedBox(height: 16.h),
         
         // Remember me and forgot password
-        _RememberMeRow(controller: controller),
+        const _RememberMeRow(),
       ],
     );
   }
@@ -189,12 +184,11 @@ class _InputFieldsSection extends StatelessWidget {
 
 /// Remember me and forgot password row
 class _RememberMeRow extends StatelessWidget {
-  final LogInController controller;
-
-  const _RememberMeRow({required this.controller});
+  const _RememberMeRow();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<LogInController>();
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -285,12 +279,11 @@ class _ForgotPasswordButton extends StatelessWidget {
 
 /// Actions section with sign in button and social auth
 class _ActionsSection extends StatelessWidget {
-  final LogInController controller;
-
-  const _ActionsSection({required this.controller});
+  const _ActionsSection();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<LogInController>();
     return Column(
       children: [
         // Sign in button
@@ -317,7 +310,7 @@ class _ActionsSection extends StatelessWidget {
         SizedBox(height: 24.h),
         
         // Social auth buttons
-        _SocialAuthButtons(controller: controller),
+        const _SocialAuthButtons(),
       ],
     );
   }
@@ -325,12 +318,11 @@ class _ActionsSection extends StatelessWidget {
 
 /// Social authentication buttons (Apple and Google)
 class _SocialAuthButtons extends StatelessWidget {
-  final LogInController controller;
-
-  const _SocialAuthButtons({required this.controller});
+  const _SocialAuthButtons();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<LogInController>();
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -389,12 +381,11 @@ class _SocialAuthButton extends StatelessWidget {
 
 /// Sign up prompt at bottom
 class _SignUpPrompt extends StatelessWidget {
-  final LogInController controller;
-
-  const _SignUpPrompt({required this.controller});
+  const _SignUpPrompt();
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<LogInController>();
     return GestureDetector(
       onTap: () => controller.navigateToSignUp(context),
       child: Row(

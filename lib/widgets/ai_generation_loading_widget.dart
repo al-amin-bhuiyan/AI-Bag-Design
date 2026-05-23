@@ -147,16 +147,31 @@ class _LoadingContentState extends State<_LoadingContent> {
                     color: Colors.transparent,
                   ),
                   child: _videoController.value.isInitialized
-                      ? Transform.scale(
-                          scale: 1.29, // Scale up to hide any black bars/margins
-                          child: FittedBox(
-                            fit: BoxFit.cover, // Fill the width perfectly
-                            child: SizedBox(
-                              width: _videoController.value.size.width,
-                              height: _videoController.value.size.height,
-                              child: VideoPlayer(_videoController),
-                            ),
-                          ),
+                      ? Builder(
+                          builder: (context) {
+                            final size = MediaQuery.of(context).size;
+                            final videoAspectRatio = _videoController.value.aspectRatio;
+                            final deviceAspectRatio = size.width / size.height;
+
+                            double responsiveScale = videoAspectRatio / deviceAspectRatio;
+                            if (responsiveScale < 1.0) {
+                              responsiveScale = 1.0 / responsiveScale;
+                            }
+                            responsiveScale *= 0.45;
+
+                            return Transform.scale(
+                              scale: responsiveScale,
+                              child: FittedBox(
+                                fit: BoxFit.cover
+                                , // Fill the width perfectly
+                                child: SizedBox(
+                                  width: _videoController.value.size.width,
+                                  height: _videoController.value.size.height,
+                                  child: VideoPlayer(_videoController),
+                                ),
+                              ),
+                            );
+                          },
                         )
                       : SizedBox(
                           height: 100.h,

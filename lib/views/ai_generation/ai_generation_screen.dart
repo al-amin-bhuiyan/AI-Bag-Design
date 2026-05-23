@@ -180,18 +180,32 @@ class _LoadingContentState extends State<_LoadingContent> {
                     width: double.infinity,
                     height: 350.h,
                     child: _videoController.value.isInitialized
-                        ? Transform.scale(
-                            scale: 1.20,
-                            child: SizedBox.expand(
-                              child: FittedBox(
-                                fit: BoxFit.cover,
-                                child: SizedBox(
-                                  width: _videoController.value.size.width,
-                                  height: _videoController.value.size.height,
-                                  child: VideoPlayer(_videoController),
+                        ? Builder(
+                            builder: (context) {
+                              final size = MediaQuery.of(context).size;
+                              final videoAspectRatio = _videoController.value.aspectRatio;
+                              final deviceAspectRatio = size.width / size.height;
+
+                              double responsiveScale = videoAspectRatio / deviceAspectRatio;
+                              if (responsiveScale < 1.0) {
+                                responsiveScale = 1.0 / responsiveScale;
+                              }
+                              responsiveScale *= 0.33;
+
+                              return Transform.scale(
+                                scale: responsiveScale,
+                                child: SizedBox.expand(
+                                  child: FittedBox(
+                                    fit: BoxFit.cover,
+                                    child: SizedBox(
+                                      width: _videoController.value.size.width,
+                                      height: _videoController.value.size.height,
+                                      child: VideoPlayer(_videoController),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
+                              );
+                            },
                           )
                         : const SizedBox.shrink(),
                   ),

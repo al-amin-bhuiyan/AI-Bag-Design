@@ -110,7 +110,7 @@ class _BagTypeOptions extends StatelessWidget {
         // Full Graphic Bag
         Obx(() => _BagTypeCard(
           image: CustomAssets.createYourFullGraphicsBag,
-          title: 'Create Full Graphic Bag',
+          title: 'Create Graphics',
           isSelected: controller.isFullGraphicSelected,
           onTap: () => controller.createFullGraphicBag(),
         )),
@@ -120,7 +120,7 @@ class _BagTypeOptions extends StatelessWidget {
         // Label Bag
         Obx(() => _BagTypeCard(
           image: CustomAssets.createLabelBag,
-          title: 'Create Label Bag',
+          title: 'Create Label',
           isSelected: controller.isLabelSelected,
           onTap: () => controller.createLabelBag(),
         )),

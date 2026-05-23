@@ -14,14 +14,14 @@ void main(){
 
   Binding.init();
 
-  runApp(const MyApp());
+  //runApp(const MyApp());
 
-  //  runApp(
-  //    DevicePreview(
-  //      enabled: true, // <-- TURN ON DEVICE PREVIEW
-  //      builder: (context) => const MyApp(),
-  //     ),
-  //  );
+   runApp(
+     DevicePreview(
+       enabled: true, // <-- TURN ON DEVICE PREVIEW
+       builder: (context) => const MyApp(),
+      ),
+   );
 }
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

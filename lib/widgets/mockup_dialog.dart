@@ -469,97 +469,115 @@ class _ActionButtons extends StatelessWidget {
             AwesomeDialog(
               context: context,
               animType: AnimType.scale,
+              // 1. Keep noHeader but disable the native asset loop constraint
               dialogType: DialogType.noHeader,
+              headerAnimationLoop: false,
+              // 2. Reduce the top padding from 60.h to 16.h so the custom header doesn't push down the body layout
+              padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
               customHeader: Container(
                 width: 100.r,
                 height: 100.r,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: AssetImage(CustomAssets.logoSs),
-                    fit: BoxFit.cover,
+                  color: Colors.white, // Protects image bounds if asset has a white background
+                ),
+                // 3. Use ClipOval with BoxFit.contain to stop all four sides from being clipped
+                child: ClipOval(
+                  child: Padding(
+                    padding: EdgeInsets.all(4.r), // Small breathing room inside the circle boundary
+                    child: Image.asset(
+                      CustomAssets.imageLoggss,
+                      fit: BoxFit.contain, // Prevents stretching and shows the full scale image
+                    ),
                   ),
                 ),
               ),
-              body: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Design Saved!',
-                      style: AppFonts.poppinsSemiBold(
-                        fontSize: 24.sp,
-                        color: const Color(0xFF4A4A4A),
+              body: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // This matches your original spacing configuration smoothly
+                      SizedBox(height: 12.h),
+                      Text(
+                        'Design Saved!',
+                        style: AppFonts.poppinsSemiBold(
+                          fontSize: 24.sp,
+                          color: const Color(0xFF4A4A4A),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Bag design saved. Contact us to claim:',
-                      textAlign: TextAlign.center,
-                      style: AppFonts.interSemiBold(
-                        fontSize: 14.sp,
-                        color: const Color(0xFF3B4094),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Bag design saved. Contact us to claim:',
+                        textAlign: TextAlign.center,
+                        style: AppFonts.interSemiBold(
+                          fontSize: 14.sp,
+                          color: const Color(0xFF3B4094),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SelectableText.rich(
-                            TextSpan(
-                              style: AppFonts.interRegular(
-                                fontSize: 13.sp,
-                                color: const Color(0xFF4B4B4B),
+                      SizedBox(height: 16.h),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SelectableText.rich(
+                              TextSpan(
+                                style: AppFonts.interRegular(
+                                  fontSize: 13.sp,
+                                  color: const Color(0xFF4B4B4B),
+                                ),
+                                children: const [
+                                  TextSpan(
+                                    text: 'Phone: ',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                                  ),
+                                  TextSpan(text: '1-909-902-5777'),
+                                ],
                               ),
-                              children: const [
-                                TextSpan(
-                                  text: 'Phone: ',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-                                ),
-                                TextSpan(text: '1-909-902-5777'),
-                              ],
+                              cursorColor: const Color(0xFF1F7CD5),
+                              showCursor: true,
                             ),
-                            cursorColor: const Color(0xFF1F7CD5),
-                            showCursor: true,
-                          ),
-                          SizedBox(height: 8.h),
-                          SelectableText.rich(
-                            TextSpan(
-                              style: AppFonts.interRegular(
-                                fontSize: 13.sp,
-                                color: const Color(0xFF4B4B4B),
+                            SizedBox(height: 8.h),
+                            SelectableText.rich(
+                              TextSpan(
+                                style: AppFonts.interRegular(
+                                  fontSize: 13.sp,
+                                  color: const Color(0xFF4B4B4B),
+                                ),
+                                children: const [
+                                  TextSpan(
+                                    text: 'Email: ',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                                  ),
+                                  TextSpan(
+                                    text: 'info@Soesternpackaging.com',
+                                    style: TextStyle(
+                                      color: Color(0xFF1F60D6),
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              children: const [
-                                TextSpan(
-                                  text: 'Email: ',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-                                ),
-                                TextSpan(
-                                  text: 'info@Soesternpackaging.com',
-                                  style: TextStyle(color: Color(0xFF1F60D6), decoration: TextDecoration.underline),
-                                ),
-                              ],
+                              cursorColor: const Color(0xFF1F7CD5),
+                              showCursor: true,
                             ),
-                            cursorColor: const Color(0xFF1F7CD5),
-                            showCursor: true,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'Please contact us for further process.',
-                      textAlign: TextAlign.center,
-                      style: AppFonts.interRegular(
-                        fontSize: 13.sp,
-                        color: const Color(0xFF5A5A5A),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Please contact us for further process.',
+                        textAlign: TextAlign.center,
+                        style: AppFonts.interRegular(
+                          fontSize: 13.sp,
+                          color: const Color(0xFF5A5A5A),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 8.h),
-                  ],
+                      SizedBox(height: 8.h),
+                    ],
+                  ),
                 ),
               ),
               btnOkText: 'Close',
@@ -570,7 +588,6 @@ class _ActionButtons extends StatelessWidget {
                 color: Colors.white,
               ),
               btnOkOnPress: () async {
-                // 3. Add to collections logic
                 await onAddToCollections?.call();
               },
             ).show();

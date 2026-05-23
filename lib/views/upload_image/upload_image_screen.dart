@@ -332,19 +332,7 @@ class _ImagePreviewContent extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      SvgPicture.asset(
-                        CustomAssets.saveicon,
-                        width: 28.w,
-                        height: 28.h,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        'Save',
-                        style: AppFonts.interRegular(
-                          fontSize: 18.sp,
-                          color: const Color(0xFF0F0F0F),
-                        ).copyWith(height: 1.40),
-                      ),
+
                     ],
                   ),
                 ),

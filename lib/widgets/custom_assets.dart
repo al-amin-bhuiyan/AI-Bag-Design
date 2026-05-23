@@ -53,6 +53,7 @@ class CustomAssets {
   static const String personimage = '$_imagesPath/person_image.png';
 
   static const String texttodesignimage ='$_imagesPath/text_to_design_second_page.png';
+  static const String imageLoggss= '$_imagesPath/lOGOsss.png';
 
   // ============ ICONS ============
   
@@ -82,6 +83,7 @@ class CustomAssets {
   static const String saveicon = '$_iconsPath/save_icon.svg';
   static const String showbagdesign = '$_iconsPath/show_bag_design.svg';
   static const String logoSmall = '$_iconsPath/LogoSmall.svg';
+
 
   // ============ FONTS ============
   static const String poppinsFontFamily = 'Poppins';
@@ -131,6 +133,7 @@ class CustomAssets {
         personimage,
 
         texttodesignimage,
+    imageLoggss,
       ];
   
   /// Returns all icon paths

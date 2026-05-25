@@ -46,28 +46,22 @@ dev_dependencies:
   flutter_native_splash: ^2.4.3
   flutter_lints: ^6.0.0
 
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/images/lOGOss.png"
-  remove_alpha_ios: true
-  adaptive_icon_background: "#EBFCFF"
-  adaptive_icon_foreground: "assets/images/lOGOss.png"
+
 
 flutter_native_splash:
   # Solid color background for better logo visibility
-  background: "assets/images/main_background.png"
-  
+  background_image: "assets/images/main_background.png"
+
   # Splash screen logo - using splash_logo.png
-  image: "assets/images/lOGOss.png"
-  
+  image: "assets/images/splash_logo.png"
+
   # Android specific settings
   android: true
   android_12:
-    image: "assets/images/lOGOss.png"
+    image: "assets/images/splash_logo.png"
     color: "#EBFCFF"
     icon_background_color: "#EBFCFF"
-  
+
   # iOS specific settings
   ios: true
   
@@ -82,9 +76,6 @@ flutter_native_splash:
   
   # iOS content mode
   ios_content_mode: center
-  
-  # Ensure logo is not cropped
-  android_disable_fullscreen: false
 
 flutter:
   uses-material-design: true

@@ -90,9 +90,9 @@ class _SplashLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Image.asset(
-      CustomAssets.splashLogo,
-      width: 402.w,
-      height: 252.h,
+      CustomAssets.logoSs,
+      width: 70.w,
+      height: 70.h,
       filterQuality: FilterQuality.high,
       fit: BoxFit.contain,
     );

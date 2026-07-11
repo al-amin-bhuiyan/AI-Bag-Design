@@ -117,12 +117,24 @@ class ProfileController extends GetxController {
   Future<void> logout(BuildContext context) async {
     isLoggingOut.value = true;
     try {
-      await _tokenStorage.clearAll();
+      debugPrint('🚪 Logging out user: ${session.email.value}');
+
+      // Clear all state immediately for fast visual update
+      session.clear();
       SessionDataIsolationService.instance.clearUserScopedState();
       AuthStateService.instance.setUnauthenticated();
-      debugPrint('✅ Logout successful');
-      // Navigate using the context passed from the view — always valid
-      if (context.mounted) context.go(AppPath.login);
+
+      // Clear specific auth tokens and flags
+      await _tokenStorage.clearAll(isManualLogout: true);
+
+      // Force UI reset
+      update();
+
+      debugPrint('✅ Logout complete — redirecting to login');
+
+      if (context.mounted) {
+        context.go(AppPath.login);
+      }
     } catch (e) {
       debugPrint('❌ Logout failed: $e');
       Fluttertoast.showToast(

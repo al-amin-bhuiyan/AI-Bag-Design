@@ -46,8 +46,6 @@ class _VerificationCodeContent extends StatelessWidget {
       decoration: const BoxDecoration(color: Colors.white),
       child: Stack(
         children: [
-          // Status Bar
-        //  _StatusBar(),
           // Bottom Navigation Bar
           _BottomNavigationBar(),
           // Main Content
@@ -59,80 +57,6 @@ class _VerificationCodeContent extends StatelessWidget {
           // App Bar
           _AppBar(controller: controller),
         ],
-      ),
-    );
-  }
-}
-
-/// Status bar widget
-class _StatusBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      top: 0,
-      child: Container(
-        width: 402.w,
-        padding: EdgeInsets.only(
-          left: 26.w,
-          right: 26.w,
-          bottom: 14.h,
-        ),
-        clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(),
-        child: Stack(
-          children: [
-            SizedBox(
-              width: double.infinity,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 30.h,
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Spacer(),
-                      // Time indicator
-                      Container(
-                        width: 54.w,
-                        height: 21.h,
-                        alignment: Alignment.center,
-                        child: Text(
-                          '9:41',
-                          style: AppFonts.poppinsSemiBold(
-                            fontSize: 15.sp,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 227.w),
-                      // Status icons
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Icon(Icons.signal_cellular_alt, size: 14.sp),
-                          SizedBox(width: 4.w),
-                          Icon(Icons.wifi, size: 14.sp),
-                          SizedBox(width: 4.w),
-                          Icon(Icons.battery_full, size: 14.sp),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

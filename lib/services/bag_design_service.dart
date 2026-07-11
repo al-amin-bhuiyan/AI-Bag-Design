@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:jeebz_bag_design_app/models/design_generation_response_model.dart';
 import 'package:jeebz_bag_design_app/models/generate_logo_response_model.dart';
 import 'package:jeebz_bag_design_app/models/logo_upload_response_model.dart';
@@ -28,47 +26,23 @@ class BagDesignService {
   }) async {
     try {
       final token = await TokenStorageService.instance.getAccessToken();
-      final uri = Uri.parse('${AppConstants.baseUrl}${AppConstants.uploadLogoEndpoint}');
+      final response = await ApiService.instance.postMultipart(
+        endpoint: AppConstants.uploadLogoEndpoint,
+        fields: {},
+        imageFile: imageFile,
+        imageFieldName: 'image',
+        token: token,
+      );
 
-      debugPrint('');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('🆔 Multipart Request: uploadLogo');
-      debugPrint('📁 File: lib/services/bag_design_service.dart');
-      debugPrint('🌐 POST multipart → $uri');
-      debugPrint('📤 Image Field: image');
-      debugPrint('📤 Image Name: ${imageFile.path.split('/').last}');
-      debugPrint('📤 Image Path: ${imageFile.path}');
-      debugPrint('🔑 Token: ${token != null && token.isNotEmpty ? 'Bearer ${token.substring(0, token.length.clamp(0, 20))}...' : 'None'}');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-      final request = http.MultipartRequest('POST', uri);
-      request.headers['Accept'] = 'application/json';
-      if (token != null && token.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
-      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
-
-      final streamedResponse = await request
-          .send()
-          .timeout(Duration(seconds: AppConstants.connectTimeoutSeconds));
-      final response = await http.Response.fromStream(streamedResponse);
-
-      debugPrint('📥 Status: ${response.statusCode}');
-      debugPrint('📥 Response Body: ${response.body}');
-      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      debugPrint('');
-
-      final data = _parseJsonMap(response.body);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.success && response.data != null) {
         return ApiResponse.success(
-          data: LogoUploadResponseModel.fromJson(data),
+          data: LogoUploadResponseModel.fromJson(response.data!),
           statusCode: response.statusCode,
         );
       }
 
       return ApiResponse.error(
-        message: _extractErrorMessage(data, response.statusCode),
+        message: response.errorMessage ?? 'Failed to upload logo',
         statusCode: response.statusCode,
       );
     } catch (e) {
@@ -344,20 +318,6 @@ class BagDesignService {
   }
 
 
-  Map<String, dynamic> _parseJsonMap(String responseBody) {
-    final decoded = jsonDecode(responseBody);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-    return {'data': decoded};
-  }
-
-  String _extractErrorMessage(Map<String, dynamic> data, int statusCode) {
-    if (data['detail'] != null) return data['detail'].toString();
-    if (data['message'] != null) return data['message'].toString();
-    if (data['error'] != null) return data['error'].toString();
-    return 'Request failed with status $statusCode';
-  }
 
   List<dynamic> _extractCollectionItems(Map<String, dynamic> data) {
     if (data['results'] is List) return data['results'] as List<dynamic>;

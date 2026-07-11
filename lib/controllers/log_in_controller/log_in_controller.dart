@@ -128,6 +128,12 @@ class LogInController extends GetxController {
           image: data.user.image,
         );
 
+        // Save remember me and password for auto-login on token expiry
+        await _tokenStorage.saveRememberMe(
+          rememberMe: _rememberMe.value,
+          password: _rememberMe.value ? password : '',
+        );
+
         // Populate UserSessionService (single source of truth)
         // so ProfileCard, NavBar etc. show real data instantly without re-fetching
         UserSessionService.instance.id.value       = data.user.id;
@@ -185,9 +191,15 @@ class LogInController extends GetxController {
   /// Pre-fills email if remembered
   Future<void> _loadSavedEmail() async {
     final savedEmail = await _tokenStorage.getUserEmail();
-    if (savedEmail != null && savedEmail.isNotEmpty) {
+    final isRememberMe = await _tokenStorage.getRememberMe();
+    final savedPassword = await _tokenStorage.getUserPassword();
+
+    if (savedEmail != null && savedEmail.isNotEmpty && isRememberMe) {
       emailController.text = savedEmail;
       _rememberMe.value = true;
+      if (savedPassword != null && savedPassword.isNotEmpty) {
+        passwordController.text = savedPassword;
+      }
     }
   }
 

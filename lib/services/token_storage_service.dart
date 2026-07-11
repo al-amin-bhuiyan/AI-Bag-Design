@@ -18,6 +18,8 @@ class TokenStorageService {
   static const String _userIdKey = 'user_id';
   static const String _userImageKey = 'user_image';
   static const String _hasSeenOnboardingKey = 'has_seen_onboarding';
+  static const String _rememberMeKey = 'remember_me';
+  static const String _userPasswordKey = 'user_password';
 
   // ─── Save ─────────────────────────────────────────────────────────────────
 
@@ -49,6 +51,17 @@ class TokenStorageService {
   Future<void> setOnboardingSeen() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hasSeenOnboardingKey, true);
+  }
+
+  /// Saves remember me status and password securely (for auto-login)
+  Future<void> saveRememberMe({required bool rememberMe, String password = ''}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_rememberMeKey, rememberMe);
+    if (rememberMe && password.isNotEmpty) {
+      await prefs.setString(_userPasswordKey, password);
+    } else {
+      await prefs.remove(_userPasswordKey);
+    }
   }
 
   // ─── Read ─────────────────────────────────────────────────────────────────
@@ -101,19 +114,35 @@ class TokenStorageService {
     return token != null && token.isNotEmpty;
   }
 
+  /// Returns if remember me is checked
+  Future<bool> getRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_rememberMeKey) ?? false;
+  }
+
+  /// Returns saved user password or null
+  Future<String?> getUserPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userPasswordKey);
+  }
+
   // ─── Clear ────────────────────────────────────────────────────────────────
 
   /// Clears tokens and user info (logout) — keeps onboarding flag
-  Future<void> clearAll() async {
+  Future<void> clearAll({bool isManualLogout = false}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
     await prefs.remove(_refreshTokenKey);
-    await prefs.remove(_userEmailKey);
-    await prefs.remove(_userNameKey);
     await prefs.remove(_userIdKey);
+    await prefs.remove(_userNameKey);
     await prefs.remove(_userImageKey);
-    // NOTE: _hasSeenOnboardingKey is intentionally kept so returning
-    // users skip onboarding after logout
+
+    // If it's a manual logout, clear remember me data too.
+    // Otherwise, keep email and password so auto-login can trigger.
+    if (isManualLogout) {
+      await prefs.remove(_userEmailKey);
+      await prefs.remove(_rememberMeKey);
+      await prefs.remove(_userPasswordKey);
+    }
   }
 }
-

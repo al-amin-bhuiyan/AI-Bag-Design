@@ -64,7 +64,9 @@ class UploadImageController extends GetxController {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
       );
       if (image != null) {
         _selectedImagePath.value = image.path;

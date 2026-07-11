@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/api_response_model.dart';
 import '../utils/app_constants.dart';
+import '../routes/route_path.dart';
+import '../routes/app_path.dart';
+import 'auth_state_service.dart';
+import 'token_storage_service.dart';
 
 /// ApiService - Base HTTP service layer
 /// Handles all raw HTTP requests with proper error handling
@@ -43,6 +47,7 @@ class ApiService {
     required Map<String, dynamic> body,
     String? token,
     int? timeoutSeconds,
+    bool isRetry = false,
   }) async {
     final requestId = ++_requestCounter;
     final stopwatch = Stopwatch()..start();
@@ -74,6 +79,24 @@ class ApiService {
       debugPrint('⏱️ Duration: ${stopwatch.elapsedMilliseconds}ms');
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       debugPrint('');
+
+      // Check for 401 and try auto refresh
+      if (response.statusCode == 401 && !isRetry && !_isAuthEndpoint(endpoint)) {
+        final newToken = await _refreshToken();
+        if (newToken != null) {
+          // Retry request with new token
+          return post(
+            endpoint: endpoint,
+            body: body,
+            token: newToken,
+            timeoutSeconds: timeoutSeconds,
+            isRetry: true,
+          );
+        } else {
+          // Refresh failed, log out user
+          await _forceLogout();
+        }
+      }
 
       return _handleResponse(response);
     } on SocketException {
@@ -112,6 +135,7 @@ class ApiService {
     required String endpoint,
     String? token,
     Map<String, String>? queryParams,
+    bool isRetry = false,
   }) async {
     final requestId = ++_requestCounter;
     final stopwatch = Stopwatch()..start();
@@ -144,6 +168,23 @@ class ApiService {
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       debugPrint('');
 
+      // Check for 401 and try auto refresh
+      if (response.statusCode == 401 && !isRetry && !_isAuthEndpoint(endpoint)) {
+        final newToken = await _refreshToken();
+        if (newToken != null) {
+          // Retry request with new token
+          return get(
+            endpoint: endpoint,
+            token: newToken,
+            queryParams: queryParams,
+            isRetry: true,
+          );
+        } else {
+          // Refresh failed, log out user
+          await _forceLogout();
+        }
+      }
+
       return _handleResponse(response);
     } on SocketException {
       stopwatch.stop();
@@ -165,6 +206,7 @@ class ApiService {
     required String endpoint,
     required Map<String, dynamic> body,
     String? token,
+    bool isRetry = false,
   }) async {
     final requestId = ++_requestCounter;
     final stopwatch = Stopwatch()..start();
@@ -195,6 +237,23 @@ class ApiService {
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       debugPrint('');
 
+      // Check for 401 and try auto refresh
+      if (response.statusCode == 401 && !isRetry && !_isAuthEndpoint(endpoint)) {
+        final newToken = await _refreshToken();
+        if (newToken != null) {
+          // Retry request with new token
+          return patch(
+            endpoint: endpoint,
+            body: body,
+            token: newToken,
+            isRetry: true,
+          );
+        } else {
+          // Refresh failed, log out user
+          await _forceLogout();
+        }
+      }
+
       return _handleResponse(response);
     } on SocketException {
       stopwatch.stop();
@@ -219,6 +278,7 @@ class ApiService {
     File? imageFile,
     String imageFieldName = 'image',
     String? token,
+    bool isRetry = false,
   }) async {
     final requestId = ++_requestCounter;
     final stopwatch = Stopwatch()..start();
@@ -275,6 +335,124 @@ class ApiService {
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       debugPrint('');
 
+      // Check for 401 and try auto refresh
+      if (response.statusCode == 401 && !isRetry && !_isAuthEndpoint(endpoint)) {
+        final newToken = await _refreshToken();
+        if (newToken != null) {
+          // Retry request with new token
+          return patchMultipart(
+            endpoint: endpoint,
+            fields: fields,
+            imageFile: imageFile,
+            imageFieldName: imageFieldName,
+            token: newToken,
+            isRetry: true,
+          );
+        } else {
+          // Refresh failed, log out user
+          await _forceLogout();
+        }
+      }
+
+      return _handleResponse(response);
+    } on SocketException {
+      stopwatch.stop();
+      return ApiResponse.error(
+        message: 'No internet connection. Please check your network.',
+        statusCode: 0,
+      );
+    } catch (e) {
+      stopwatch.stop();
+      return ApiResponse.error(
+        message: 'Something went wrong: ${e.toString()}',
+        statusCode: 0,
+      );
+    }
+  }
+
+  /// POST multipart request — standardizes post requests with files
+  Future<ApiResponse<Map<String, dynamic>>> postMultipart({
+    required String endpoint,
+    required Map<String, String> fields,
+    File? imageFile,
+    String imageFieldName = 'image',
+    String? token,
+    bool isRetry = false,
+  }) async {
+    final requestId = ++_requestCounter;
+    final stopwatch = Stopwatch()..start();
+    try {
+      final uri = _buildUri(endpoint);
+      final request = http.MultipartRequest('POST', uri);
+      final caller = _resolveCallerFrame();
+
+      // Authorization header
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.headers['Accept'] = 'application/json';
+
+      // Text fields
+      request.fields.addAll(fields);
+
+      // Image file (optional)
+      if (imageFile != null) {
+        final stream = http.ByteStream(imageFile.openRead());
+        final length = await imageFile.length();
+        final multipartFile = http.MultipartFile(
+          imageFieldName,
+          stream,
+          length,
+          filename: imageFile.path.split('/').last,
+        );
+        request.files.add(multipartFile);
+      }
+
+      debugPrint('');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('🆔 Request #$requestId');
+      debugPrint('📁 File: lib/services/api_service.dart');
+      debugPrint('📍 Caller: $caller');
+      debugPrint('🌐 POST multipart → $uri');
+      debugPrint('🔑 Token: ${token != null && token.isNotEmpty ? 'Bearer ${token.substring(0, token.length.clamp(0, 20))}...' : 'None'}');
+      debugPrint('📤 Fields: $fields');
+      debugPrint('📤 Has Image: ${imageFile != null}');
+      if (imageFile != null) {
+        debugPrint('📤 Image Name: ${imageFile.path.split('/').last}');
+        debugPrint('📤 Image Path: ${imageFile.path}');
+      }
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      final streamedResponse = await request.send()
+          .timeout(Duration(seconds: AppConstants.connectTimeoutSeconds));
+      final response = await http.Response.fromStream(streamedResponse);
+
+      stopwatch.stop();
+      debugPrint('📥 Status: ${response.statusCode}');
+      debugPrint('📥 Response Body: ${response.body}');
+      debugPrint('⏱️ Duration: ${stopwatch.elapsedMilliseconds}ms');
+      debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      debugPrint('');
+
+      // Check for 401 and try auto refresh
+      if (response.statusCode == 401 && !isRetry && !_isAuthEndpoint(endpoint)) {
+        final newToken = await _refreshToken();
+        if (newToken != null) {
+          // Retry request with new token
+          return postMultipart(
+            endpoint: endpoint,
+            fields: fields,
+            imageFile: imageFile,
+            imageFieldName: imageFieldName,
+            token: newToken,
+            isRetry: true,
+          );
+        } else {
+          // Refresh failed, log out user
+          await _forceLogout();
+        }
+      }
+
       return _handleResponse(response);
     } on SocketException {
       stopwatch.stop();
@@ -295,6 +473,7 @@ class ApiService {
   Future<ApiResponse<Map<String, dynamic>>> delete({
     required String endpoint,
     String? token,
+    bool isRetry = false,
   }) async {
     final requestId = ++_requestCounter;
     final stopwatch = Stopwatch()..start();
@@ -323,6 +502,22 @@ class ApiService {
       debugPrint('⏱️ Duration: ${stopwatch.elapsedMilliseconds}ms');
       debugPrint('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       debugPrint('');
+
+      // Check for 401 and try auto refresh
+      if (response.statusCode == 401 && !isRetry && !_isAuthEndpoint(endpoint)) {
+        final newToken = await _refreshToken();
+        if (newToken != null) {
+          // Retry request with new token
+          return delete(
+            endpoint: endpoint,
+            token: newToken,
+            isRetry: true,
+          );
+        } else {
+          // Refresh failed, log out user
+          await _forceLogout();
+        }
+      }
 
       return _handleResponse(response);
     } on SocketException {
@@ -411,6 +606,70 @@ class ApiService {
     }
 
     return 'Request failed with status $statusCode';
+  }
+
+  /// Refreshes the access token using the stored refresh token
+  Future<String?> _refreshToken() async {
+    try {
+      final refreshToken = await TokenStorageService.instance.getRefreshToken();
+      if (refreshToken == null || refreshToken.isEmpty) return null;
+
+      final uri = _buildUri(AppConstants.tokenRefreshEndpoint);
+      final headers = _defaultHeaders();
+      final body = jsonEncode({'refresh': refreshToken});
+
+      final response = await _client
+          .post(uri, headers: headers, body: body)
+          .timeout(Duration(seconds: AppConstants.connectTimeoutSeconds));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final newAccessToken = decoded['access']?.toString() ?? decoded['access_token']?.toString();
+          final newRefreshToken = decoded['refresh']?.toString() ?? decoded['refresh_token']?.toString();
+          if (newAccessToken != null && newAccessToken.isNotEmpty) {
+            await TokenStorageService.instance.saveTokens(
+              accessToken: newAccessToken,
+              refreshToken: newRefreshToken ?? refreshToken,
+            );
+            return newAccessToken;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Auto-token refresh failed: $e');
+    }
+    return null;
+  }
+
+  /// Checks if the endpoint is an authentication endpoint that shouldn't auto-refresh tokens
+  bool _isAuthEndpoint(String endpoint) {
+    return endpoint == AppConstants.registerEndpoint ||
+        endpoint == AppConstants.verifyOtpSignupEndpoint ||
+        endpoint == AppConstants.loginEndpoint ||
+        endpoint == AppConstants.forgotPasswordEndpoint ||
+        endpoint == AppConstants.sendResetPasswordEmailEndpoint ||
+        endpoint == AppConstants.resetPasswordOtpEndpoint ||
+        endpoint == AppConstants.setNewPasswordEndpoint ||
+        endpoint == AppConstants.verifyOtpForgotEndpoint ||
+        endpoint == AppConstants.resendOtpEndpoint ||
+        endpoint == AppConstants.tokenRefreshEndpoint ||
+        endpoint == AppConstants.tokenVerifyEndpoint;
+  }
+
+  /// Forces user logout, clears stored tokens, and redirects to login screen
+  Future<void> _forceLogout() async {
+    try {
+      debugPrint('🚨 Force logout: Session expired and token refresh failed.');
+      await TokenStorageService.instance.clearAll();
+      AuthStateService.instance.reset(); // clear cached auth state
+      AuthStateService.instance.setUnauthenticated();
+      
+      // Navigate to login screen
+      RoutePath.router.go(AppPath.login);
+    } catch (e) {
+      debugPrint('❌ Error during force logout: $e');
+    }
   }
 
   /// Dispose HTTP client

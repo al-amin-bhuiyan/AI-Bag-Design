@@ -55,23 +55,27 @@ class AppColors {
 
   /// Returns a color with custom opacity
   static Color withOpacity(Color color, double opacity) {
-    return color.withOpacity(opacity);
+    return color.withValues(alpha: opacity);
   }
 
   /// Returns a MaterialColor from a Color
   static MaterialColor toMaterialColor(Color color) {
+    final r = (color.r * 255).round().clamp(0, 255);
+    final g = (color.g * 255).round().clamp(0, 255);
+    final b = (color.b * 255).round().clamp(0, 255);
+
     final Map<int, Color> shades = {
-      50: Color.fromRGBO(color.red, color.green, color.blue, .1),
-      100: Color.fromRGBO(color.red, color.green, color.blue, .2),
-      200: Color.fromRGBO(color.red, color.green, color.blue, .3),
-      300: Color.fromRGBO(color.red, color.green, color.blue, .4),
-      400: Color.fromRGBO(color.red, color.green, color.blue, .5),
-      500: Color.fromRGBO(color.red, color.green, color.blue, .6),
-      600: Color.fromRGBO(color.red, color.green, color.blue, .7),
-      700: Color.fromRGBO(color.red, color.green, color.blue, .8),
-      800: Color.fromRGBO(color.red, color.green, color.blue, .9),
-      900: Color.fromRGBO(color.red, color.green, color.blue, 1),
+      50: Color.fromRGBO(r, g, b, .1),
+      100: Color.fromRGBO(r, g, b, .2),
+      200: Color.fromRGBO(r, g, b, .3),
+      300: Color.fromRGBO(r, g, b, .4),
+      400: Color.fromRGBO(r, g, b, .5),
+      500: Color.fromRGBO(r, g, b, .6),
+      600: Color.fromRGBO(r, g, b, .7),
+      700: Color.fromRGBO(r, g, b, .8),
+      800: Color.fromRGBO(r, g, b, .9),
+      900: Color.fromRGBO(r, g, b, 1),
     };
-    return MaterialColor(color.value, shades);
+    return MaterialColor(color.toARGB32(), shades);
   }
 }

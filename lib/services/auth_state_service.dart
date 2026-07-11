@@ -125,8 +125,41 @@ class AuthStateService {
         }
       }
 
-      // ── Step 5: Both tokens invalid — clear and send to login ─────────────
-      debugPrint('🔓 All tokens invalid → unauthenticated');
+      // ── Step 5: Both tokens invalid or expired — try auto login ───────────
+      final bool isRememberMe = await _tokenStorage.getRememberMe();
+      if (isRememberMe) {
+        final String? email = await _tokenStorage.getUserEmail();
+        final String? password = await _tokenStorage.getUserPassword();
+
+        if (email != null && email.isNotEmpty && password != null && password.isNotEmpty) {
+          debugPrint('🔄 Tokens expired but Remember Me is active. Attempting silent auto-login...');
+          final loginResponse = await _authService.login(email: email, password: password);
+
+          if (loginResponse.success && loginResponse.data != null &&
+              loginResponse.data!.accessToken.isNotEmpty &&
+              loginResponse.data!.refreshToken.isNotEmpty) {
+
+            // Persist new tokens and user info
+            await _tokenStorage.saveTokens(
+              accessToken: loginResponse.data!.accessToken,
+              refreshToken: loginResponse.data!.refreshToken,
+            );
+            await _tokenStorage.saveUserInfo(
+              id: loginResponse.data!.user.id,
+              email: loginResponse.data!.user.email,
+              name: loginResponse.data!.user.name,
+              image: loginResponse.data!.user.image,
+            );
+
+            debugPrint('✅ Silent auto-login successful → authenticated');
+            return AuthState.authenticated;
+          }
+        }
+      }
+
+      // ── Step 6: All attempts failed — clear and send to login ─────────────
+      debugPrint('🔓 All tokens invalid and auto-login failed/disabled → unauthenticated');
+      // Notice we do NOT pass isManualLogout: true so email is remembered
       await _tokenStorage.clearAll();
       return AuthState.unauthenticated;
     } catch (e) {

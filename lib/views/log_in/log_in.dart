@@ -17,9 +17,6 @@ class LogInScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize controller
-    final controller = Get.put(LogInController());
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: const _LogInContent(),

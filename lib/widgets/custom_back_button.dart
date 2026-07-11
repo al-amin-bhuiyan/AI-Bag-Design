@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import 'custom_button.dart';
@@ -23,7 +24,7 @@ class CustomBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double buttonSize = size ?? 40;
+    final double buttonSize = size ?? 40.r;
 
     return CircleFadeAnimation(
       onPressed: onPressed ?? () => _handleBackPress(context),
@@ -77,7 +78,7 @@ class _BackButtonContainer extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.arrow_back_ios_new,
-          size: iconSize ?? 24,
+          size: iconSize ?? 24.r,
           color: iconColor ?? Colors.black,
         ),
       ),

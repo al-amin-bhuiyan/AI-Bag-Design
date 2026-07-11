@@ -9,6 +9,7 @@ import '../../services/auth_service.dart';
 import '../../services/auth_state_service.dart';
 import '../../services/session_data_isolation_service.dart';
 import '../../services/token_storage_service.dart';
+import '../../services/user_session_service.dart';
 import '../../widgets/dialogs/delete_account_dialog.dart';
 /// SecurityController - Manages security screen state and business logic
 /// Calls real DELETE /accounts/user/delete-account/ API with Bearer token
@@ -58,18 +59,16 @@ class SecurityController extends GetxController {
       debugPrint('Deleting account...');
       final ApiResponse<DeleteAccountResponseModel> response =
           await _authService.deleteAccount(accessToken: accessToken);
-      if (response.success && response.data != null) {
-        final String msg = response.data!.message;
-        debugPrint('Success: $msg');
-        // Full logout — clear tokens, session, auth state
-        await _tokenStorage.clearAll();
+      if (response.success) {
+        debugPrint('✅ Account deleted from API');
+
+        // Clear all session state
+        UserSessionService.instance.clear();
         SessionDataIsolationService.instance.clearUserScopedState();
         AuthStateService.instance.setUnauthenticated();
-        _showSuccess(msg);
-        // Short delay so toast is visible
-        await Future.delayed(const Duration(milliseconds: 800));
-        // Navigate using valid screen context — always works
-        if (context.mounted) context.go(AppPath.login);
+        await _tokenStorage.clearAll(isManualLogout: true);
+
+        Fluttertoast.showToast(msg: 'Account deleted successfully.');
       } else {
         _showError(response.errorMessage ??
             'Failed to delete account. Please try again.');

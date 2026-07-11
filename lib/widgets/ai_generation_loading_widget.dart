@@ -157,7 +157,7 @@ class _LoadingContentState extends State<_LoadingContent> {
                             if (responsiveScale < 1.0) {
                               responsiveScale = 1.0 / responsiveScale;
                             }
-                            responsiveScale *= 0.45;
+                            responsiveScale *= 0.40;
 
                             return Transform.scale(
                               scale: responsiveScale,

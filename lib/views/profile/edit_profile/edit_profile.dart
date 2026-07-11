@@ -17,11 +17,6 @@ class EditProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use Get.find() — controller is already registered in Binding via lazyPut.
-    // Get.put() would create a NEW orphaned instance on every build,
-    // causing onInit() to not fire correctly and the API to never be called.
-    final controller = Get.find<EditProfileController>();
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -48,81 +43,9 @@ class EditProfile extends StatelessWidget {
             ),
           ),
           
-          // Status Bar
-       //   _StatusBar(),
-          
           // App Bar
           _AppBar(),
-          
-          // Bottom Navigation Indicator
-       //   _BottomIndicator(),
         ],
-      ),
-    );
-  }
-}
-
-/// Status Bar Widget
-class _StatusBar extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      top: 0,
-      right: 0,
-      child: Container(
-        padding: EdgeInsets.only(left: 26.w, right: 26.w, bottom: 14.h),
-        child: Column(
-          children: [
-            SizedBox(height: 30.h),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Time indicator
-                Container(
-                  width: 54.w,
-                  height: 21.h,
-                  decoration: ShapeDecoration(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.r),
-                    ),
-                  ),
-                ),
-                // Status icons
-                Row(
-                  children: [
-                    Container(width: 20.w, height: 14.h),
-                    SizedBox(width: 4.w),
-                    Container(width: 16.w, height: 14.h),
-                    SizedBox(width: 4.w),
-                    Container(
-                      width: 25.w,
-                      height: 12.h,
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            left: 2,
-                            top: 2,
-                            child: Container(
-                              width: 19.w,
-                              height: 8.h,
-                              decoration: ShapeDecoration(
-                                color: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(1.r),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -167,33 +90,6 @@ class _AppBar extends StatelessWidget {
             // Placeholder for symmetry
             SizedBox(width: 24.w),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Bottom Navigation Indicator
-class _BottomIndicator extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: Container(
-        height: 40.h,
-        child: Center(
-          child: Container(
-            width: 144.w,
-            height: 6.h,
-            decoration: ShapeDecoration(
-              color: Colors.black,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-            ),
-          ),
         ),
       ),
     );
